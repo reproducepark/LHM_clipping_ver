@@ -2,7 +2,7 @@
 # given pose sequence, generating animation video .
 
 TRAIN_CONFIG="./configs/inference/human-lrm-1B.yaml"
-MODEL_NAME="./exps/releases/video_human_benchmark/human-lrm-1B/step_060000/"
+MODEL_NAME=LHM-1B
 IMAGE_INPUT="./train_data/example_imgs/"
 MOTION_SEQS_DIR="./train_data/motion_video/mimo6/smplx_params/"
 

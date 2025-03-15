@@ -777,16 +777,11 @@ class ModelHumanLRMSapdinoBodyHeadSD3_5(ModelHumanLRM):
             image.shape[0] == smplx_params["body_pose"].shape[0]
         ), "Batch size mismatch for image and smplx_params"
         assert len(smplx_params["betas"].shape) == 2
-        render_h, render_w = int(render_intrs[0, 0, 1, 2] * 2), int(
-            render_intrs[0, 0, 0, 2] * 2
-        )
 
         if self.facesr:
             head_image = self.obtain_facesr(head_image)
 
         assert image.shape[0] == 1
-        num_views = render_c2ws.shape[1]
-
 
         query_points = None
         if self.latent_query_points_type.startswith("e2e_smplx"):
@@ -808,8 +803,19 @@ class ModelHumanLRMSapdinoBodyHeadSD3_5(ModelHumanLRM):
         )
 
 
+        return gs_model_list, query_points, smplx_params['transform_mat_neutral_pose']
+    
+
+    def animation_infer(self, gs_model_list, query_points, smplx_params, render_c2ws, render_intrs, render_bg_colors):
+        '''Inference code avoid repeat forward.
+        '''
+
+        render_h, render_w = int(render_intrs[0, 0, 1, 2] * 2), int(
+            render_intrs[0, 0, 0, 2] * 2
+        )
         # render target views
         render_res_list = []
+        num_views = render_c2ws.shape[1]
 
         for view_idx in range(num_views):
             render_res = self.renderer.forward_animate_gs(

@@ -103,6 +103,11 @@ class PoseEstimator:
         self.pad_ratio = 0.2
         self.img_size = 896
         self.fov = 60
+    
+    def to(self, device):
+        self.device = device
+        self.mhmr_model.to(device)
+        return self
 
     def get_camera_parameters(self):
         K = torch.eye(3)

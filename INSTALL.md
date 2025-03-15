@@ -27,7 +27,10 @@
 ## 3. Install base dependencies
   ```bash
   pip install -r requirements.txt
+
+  # install from source code to avoid the conflict with torchvision
   pip uninstall basicsr
+  pip install git+https://github.com/XPixelGroup/BasicSR
   ```
 
 ## 4. Install SAM2 lib. We use the modified version.

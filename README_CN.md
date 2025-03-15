@@ -1,43 +1,42 @@
-# <span><img src="./assets/LHM_logo_parsing.png" height="35" style="vertical-align: top;"> - Official PyTorch Implementation</span>
+# <span><img src="./assets/LHM_logo_parsing.png" height="35" style="vertical-align: top;"> - 官方 PyTorch 实现</span>
 
-[![Project Website](https://img.shields.io/badge/🌐-Project_Website-blueviolet)](https://lingtengqiu.github.io/LHM/)
-[![arXiv Paper](https://img.shields.io/badge/📜-arXiv:2503-10625)](https://arxiv.org/pdf/2503.10625)
+[![项目主页](https://img.shields.io/badge/🌐-项目主页-blueviolet)](https://lingtengqiu.github.io/LHM/)
+[![arXiv论文](https://img.shields.io/badge/📜-arXiv:2503-10625)](https://arxiv.org/pdf/2503.10625)
 [![HuggingFace](https://img.shields.io/badge/🤗-HuggingFace_Space-blue)](https://huggingface.co/spaces/DyrusQZ/LHM)
-[![Apache License](https://img.shields.io/badge/📃-Apache--2.0-929292)](https://www.apache.org/licenses/LICENSE-2.0)
+[![Apache协议](https://img.shields.io/badge/📃-Apache--2.0-929292)](https://www.apache.org/licenses/LICENSE-2.0)
 
 <p align="center">
   <img src="./assets/LHM_teaser.png" heihgt="100%">
 </p>
 
-如果您熟悉中文，可以[阅读中文版本的README](./README_CN.md)
-## 📢 Latest Updates
-**[March 19, 2025]** Local Gradio App.py<br>
-**[March 19, 2025]** Gradio Optimization:  Faster and More Stable 🔥🔥🔥 <br>
-**[March 15, 2025]** Inference Time Optimization:  30% Faster <br>
-**[March 13, 2025]** Initial release with:  
-✅ Inference codebase  
-✅ Pretrained LHM-0.5B model  
-✅ Pretrained LHM-1B model  
-✅ Real-time rendering pipeline  
-✅ Huggingface Online Demo  
+## 📢 最新动态
+**[March 19, 2025]** 本地部署 Gradio<br>
+**[2025年3月19日]** HuggingFace Demo：更快更稳定 <br>
+**[2025年3月15日]** 推理时间优化：提速30% <br>
+**[2025年3月13日]** 首次版本发布包含：  
+✅ 推理代码库  
+✅ 预训练 LHM-0.5B 模型  
+✅ 预训练 LHM-1B 模型  
+✅ 实时渲染管线  
+✅ Huggingface 在线演示  
 
-### TODO List 
-- [x] Core Inference Pipeline (v0.1) 🔥🔥🔥
-- [x] HuggingFace Demo Integration 🤗🤗🤗
-- [ ] ModelScope Deployment
-- [ ] Motion Processing Scripts 
-- [ ] Training Codes Release
+### 待办清单
+- [x] 核心推理管线 (v0.1) 🔥🔥🔥
+- [x] HuggingFace 演示集成 🤗🤗🤗
+- [ ] ModelScope 部署
+- [ ] 动作处理脚本 
+- [ ] 训练代码发布
 
-## 🚀 Getting Started
+## 🚀 快速开始
 
-### Environment Setup
-Clone the repository.
+### 环境配置
+克隆仓库
 ```bash
 git clone git@github.com:aigc3d/LHM.git
 cd LHM
 ```
 
-Install dependencies by script.
+通过脚本安装依赖
 ```
 # cuda 11.8
 sh ./install_cu118.sh
@@ -45,47 +44,52 @@ sh ./install_cu118.sh
 # cuda 12.1
 sh ./install_cu121.sh
 ```
-The installation has been tested with python3.10, CUDA 11.8 or CUDA 12.1.
+环境已在 python3.10、CUDA 11.8 和 CUDA 12.1 下测试通过。
 
-Or you can install dependencies step by step, following [INSTALL.md](INSTALL.md).
+也可按步骤手动安装依赖，详见[INSTALL.md](INSTALL.md)
 
+### 模型参数 
 
-### Model Weights 
+<span style="color:red">如果你没下载模型，模型将会自动下载</span>
 
-<span style="color:red">Please note that the model will be downloaded automatically if you do not download it yourself.</span>
+模型	训练数据	BH-T层数	下载链接	推理时间
+LHM-0.5B	5K合成数据	5	OSS	2.01 s
+LHM-0.5B	300K视频+5K合成数据	5	OSS	2.01 s
+LHM-0.7B	300K视频+5K合成数据	10	OSS	4.13 s
+LHM-1.0B	300K视频+5K合成数据	15	OSS	6.57 s
 
-| Model | Training Data | BH-T Layers | Link | Inference Time|
+| 模型 | 训练数据 | Transformer 层数 | 下载链接 | 推理时间 |
 | :--- | :--- | :--- | :--- | :--- |
-| LHM-0.5B | 5K Synthetic Data| 5 | OSS | 2.01 s |
-| LHM-0.5B | 300K Videos + 5K Synthetic Data | 5 | [OSS](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-0.5B.tar) | 2.01 s |
-| LHM-0.7B | 300K Videos + 5K Synthetic Data | 10 | OSS | 4.13 s  |
-| LHM-1.0B | 300K Videos + 5K Synthetic Data | 15 | [OSS](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-1B.tar) | 6.57 s |
+| LHM-0.5B | 5K合成数据| 5 | OSS | 2.01 s |
+| LHM-0.5B | 300K视频+5K合成数据 | 5 | [OSS](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-0.5B.tar) | 2.01 s |
+| LHM-0.7B | 300K视频+5K合成数据 | 10 | OSS | 4.13 s  |
+| LHM-1.0B | 300K视频+5K合成数据 | 15 | [OSS](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-1B.tar) | 6.57 s |
 
 ```bash
-# Download prior model weights
+# 下载预训练模型权重
 wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-0.5B.tar
 tar -xvf LHM-0.5B.tar 
 wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-1B.tar
-tar -xvf LHM-1B.tar 
+tar -xvf LHM-1B.tar
 ```
 
-### Download Prior Model Weights 
+### 下载先验模型权重
 ```bash
-# Download prior model weights
+# 下载先验模型权重
 wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM_prior_model.tar
 tar -xvf LHM_prior_model.tar 
 ```
 
-### Data Motion Preparation
-We provide the test motion examples, we will update the processing scripts ASAP :).
+### 动作数据准备
+我们提供了测试动作示例，处理脚本将尽快更新 :)
 
 ```bash
-# Download prior model weights
+# 下载先验模型权重
 wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/motion_video.tar
 tar -xvf ./motion_video.tar 
 ```
 
-After downloading weights and data, the folder of the project structure seems like:
+下载完成后项目目录结构如下：
 ```bash
 ├── configs
 │   ├── inference
@@ -132,23 +136,24 @@ After downloading weights and data, the folder of the project structure seems li
 ├── requirements.txt
 ```
 
-### 💻 Local Gradio Run
+
+
+### 💻 本地部署 
 ```bash
 python ./app.py
 ```
 
-### 🏃 Inference Pipeline
+### 🏃 推理流程
 ```bash
-
-# MODEL_NAME: {LHM-500M, LHM-1B}
+# MODEL_NAME={LHM-500M, LHM-1B}
 # bash ./inference.sh ./configs/inference/human-lrm-500M.yaml LHM-500M ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
-# bash ./inference.sh ./configs/inference/human-lrm-1B.yaml LHM-1B ./exps/releases/video_human_benchmark/human-lrm-1B/step_060000/ ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
+# bash ./inference.sh ./configs/inference/human-lrm-1B.yaml LHM-1B ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
 
 bash inference.sh ${CONFIG} ${MODEL_NAME} ${IMAGE_PATH_OR_FOLDER}  ${MOTION_SEQ}
 ```
 
-## Compute Metric
-We provide some simple script to compute the metrics.
+## 计算指标
+我们提供了简单的指标计算脚本：
 ```bash
 # download pretrain model into ./pretrained_models/
 wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/arcface_resnet18.pth
@@ -160,15 +165,17 @@ python ./tools/metrics/compute_psnr.py -f1 ${gt_folder} -f2 ${results_folder}
 python ./tools/metrics/compute_ssim_lpips.py -f1 ${gt_folder} -f2 ${results_folder} 
 ```
 
-## Acknowledgement
-This work is built on many amazing research works and open-source projects:
+## 致谢
+
+本工作基于以下优秀研究成果和开源项目构建：
+
 - [OpenLRM](https://github.com/3DTopia/OpenLRM)
 - [ExAvatar](https://github.com/mks0601/ExAvatar_RELEASE)
 - [DreamGaussian](https://github.com/dreamgaussian/dreamgaussian)
 
-Thanks for their excellent works and great contribution to 3D generation and 3D digital human area.
+感谢这些杰出工作对3D生成和数字人领域的重要贡献。
 
-## Citation 
+## 引用 
 ```
 @inproceedings{qiu2025LHM,
   title={LHM: Large Animatable Human Reconstruction Model for Single Image to 3D in Seconds},

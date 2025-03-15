@@ -1337,39 +1337,9 @@ class GS3DRenderer(nn.Module):
     ):
         batch_size = len(gs_attr_list)
         out_list = []
-        df_out_list = []
-
-        cano_out_list = []
+        cano_out_list = []  # inference DO NOT use
 
         N_view = smplx_data["root_pose"].shape[1]
-
-        if df_data is not None:
-            # accumulate df data
-            df_c2w = df_data["c2w"]
-            df_intrs = df_data["intrs"]
-            _, D_N, _, _ = df_intrs.shape
-            df_smplx_params = df_data["smplx_params"]
-
-            df_bg_color = torch.ones(batch_size, D_N, 3).to(background_color)
-
-            df_width = 512
-            df_height = 1024
-
-            # merge df_smplx_params with smplx_data. A trick, we set the batch is the sample view of df pose
-            for merge_key in [
-                "root_pose",
-                "body_pose",
-                "jaw_pose",
-                "leye_pose",
-                "reye_pose",
-                "lhand_pose",
-                "rhand_pose",
-                "trans",
-                "expr",
-            ]:
-                smplx_data[merge_key] = torch.cat(
-                    [smplx_data[merge_key], df_smplx_params[merge_key]], dim=1
-                )
 
         for b in range(batch_size):
             gs_attr = gs_attr_list[b]
@@ -1383,7 +1353,6 @@ class GS3DRenderer(nn.Module):
             )
 
             animatable_gs_model_list = merge_animatable_gs_model_list[:N_view]
-            df_animate_model_list = merge_animatable_gs_model_list[N_view:]
 
             assert len(animatable_gs_model_list) == c2w.shape[1]
 
@@ -1396,47 +1365,6 @@ class GS3DRenderer(nn.Module):
                     height,
                     width,
                     background_color[b] if background_color is not None else None,
-                    debug=debug,
-                )
-            )
-
-            if df_data is not None and len(df_animate_model_list) > 0:
-                assert len(df_animate_model_list) == df_c2w.shape[1]
-                df_out_list.append(
-                    self.forward_single_batch(
-                        df_animate_model_list,
-                        df_c2w[b],
-                        df_intrs[b],
-                        df_height,
-                        df_width,
-                        df_bg_color[b] if df_bg_color is not None else None,
-                        debug=debug,
-                    )
-                )
-                # debug
-                # for df_out in df_out_list:
-                #     import cv2
-
-                #     for _i, comp_rgb in enumerate(df_out["comp_rgb"]):
-                #         com_rgb = (comp_rgb.detach().cpu().numpy() * 255).astype(
-                #             np.uint8
-                #         )
-
-                #         cv2.imwrite(
-                #             "./debug/df_out/{:03d}.png".format(_i), com_rgb[..., ::-1]
-                #         )
-
-            # TODO  GAN loss 2-19
-
-            # visualize canonical space
-            cano_out_list.append(
-                self.forward_cano_batch(
-                    cano_gs_model_list,
-                    c2w[b][0:1],  # identity matrix
-                    intrinsic[b][0:1],
-                    background_color[b] if background_color is not None else None,
-                    height=768,
-                    width=768,
                     debug=debug,
                 )
             )
@@ -1460,37 +1388,6 @@ class GS3DRenderer(nn.Module):
         out["comp_depth"] = out["comp_depth"].permute(
             0, 1, 4, 2, 3
         )  # [B, NV, H, W, 3] -> [B, NV, 1, H, W]
-
-        cano_out = defaultdict(list)
-        for out_ in cano_out_list:
-            for k, v in out_.items():
-                cano_out[k].append(v)
-        for k, v in cano_out.items():
-            if isinstance(v[0], torch.Tensor):
-                cano_out[k] = torch.stack(v, dim=0)
-            else:
-                cano_out[k] = v
-
-        out["cano_comp_rgb"] = cano_out["comp_rgb"].permute(
-            0, 1, 4, 2, 3
-        )  # [B, NV, H, W, 3] -> [B, NV, 3, H, W]
-
-        # df_pose
-        if df_data is not None and len(df_out_list) > 0:
-            df_out = defaultdict(list)
-            for out_ in df_out_list:
-                for k, v in out_.items():
-                    df_out[k].append(v)
-            for k, v in df_out.items():
-                if isinstance(v[0], torch.Tensor):
-                    df_out[k] = torch.stack(v, dim=0)
-                else:
-                    df_out[k] = v
-
-            out["df_comp_rgb"] = df_out["comp_rgb"].permute(
-                0, 1, 4, 2, 3
-            )  # [B, NV, H, W, 3] -> [B, NV, 3, H, W]
-
         return out
 
     def forward(

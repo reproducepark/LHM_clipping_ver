@@ -4,7 +4,10 @@ pip install -U xformers==0.0.26.post1 --index-url https://download.pytorch.org/w
 
 # install dependencies
 pip install -r requirements.txt
+
+# install from source code to avoid the conflict with torchvision
 pip uninstall basicsr
+pip install git+https://github.com/XPixelGroup/BasicSR
 
 cd ..
 # install pytorch3d

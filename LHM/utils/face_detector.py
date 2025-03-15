@@ -85,6 +85,7 @@ class VGGHeadDetector(torch.nn.Module):
             self._init_models()
         image_tensor = image_tensor.to(self._device).float()
         image, padding, scale = self._preprocess(image_tensor)
+
         bbox, scores, flame_params = self.model(image)
         bbox, vgg_results = self._postprocess(
             bbox, scores, flame_params, conf_threshold
