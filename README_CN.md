@@ -1,5 +1,9 @@
 # <span><img src="./assets/LHM_logo_parsing.png" height="35" style="vertical-align: top;"> - 官方 PyTorch 实现</span>
 
+# <div align="center">LHM: Large Animatable Human Reconstruction Model for Single Image to 3D in Seconds<div> 
+###  <p align="center"> [Lingteng Qiu<sup>*</sup>](https://lingtengqiu.github.io/), [Xiaodong Gu<sup>*</sup>](https://scholar.google.com.hk/citations?user=aJPO514AAAAJ&hl=zh-CN&oi=ao), [Peihao Li<sup>*</sup>](https://liphao99.github.io/), [Qi Zuo<sup>*</sup>](https://scholar.google.com/citations?user=UDnHe2IAAAAJ&hl=zh-CN)<br>[Weichao Shen](https://scholar.google.com/citations?user=7gTmYHkAAAAJ&hl=zh-CN), [Junfei Zhang](https://scholar.google.com/citations?user=oJjasIEAAAAJ&hl=en), [Kejie Qiu](https://sites.google.com/site/kejieqiujack/home), [Weihao Yuan](https://weihao-yuan.com/), <br>[Guanying Chen<sup>+</sup>](https://guanyingc.github.io/), [Zilong Dong<sup>+</sup>](https://baike.baidu.com/item/%E8%91%A3%E5%AD%90%E9%BE%99/62931048), [Liefeng Bo](https://scholar.google.com/citations?user=FJwtMf0AAAAJ&hl=zh-CN)</p>
+##  <p align="center"> 阿里巴巴通义实验室</p>
+
 [![项目主页](https://img.shields.io/badge/🌐-项目主页-blueviolet)](https://lingtengqiu.github.io/LHM/)
 [![arXiv论文](https://img.shields.io/badge/📜-arXiv:2503-10625)](https://arxiv.org/pdf/2503.10625)
 [![HuggingFace](https://img.shields.io/badge/🤗-HuggingFace_Space-blue)](https://huggingface.co/spaces/DyrusQZ/LHM)
@@ -10,7 +14,9 @@
 </p>
 
 ## 📢 最新动态
-**[March 19, 2025]** 本地部署 Gradio<br>
+**[2025年3月24日]** SAM2难装 😭😭😭? 👉 那就用rembg吧!<br>
+**[2025年3月20日]** 发布视频动作处理脚本<br>
+**[2025年3月19日]** 本地部署 Gradio<br>
 **[2025年3月19日]** HuggingFace Demo：更快更稳定 <br>
 **[2025年3月15日]** 推理时间优化：提速30% <br>
 **[2025年3月13日]** 首次版本发布包含：  
@@ -24,7 +30,7 @@
 - [x] 核心推理管线 (v0.1) 🔥🔥🔥
 - [x] HuggingFace 演示集成 🤗🤗🤗
 - [ ] ModelScope 部署
-- [ ] 动作处理脚本 
+- [x] 动作处理脚本 
 - [ ] 训练代码发布
 
 ## 🚀 快速开始
@@ -40,9 +46,11 @@ cd LHM
 ```
 # cuda 11.8
 sh ./install_cu118.sh
+pip install rembg
 
 # cuda 12.1
 sh ./install_cu121.sh
+pip install rembg
 ```
 环境已在 python3.10、CUDA 11.8 和 CUDA 12.1 下测试通过。
 
@@ -81,7 +89,7 @@ tar -xvf LHM_prior_model.tar
 ```
 
 ### 动作数据准备
-我们提供了测试动作示例，处理脚本将尽快更新 :)
+我们提供了测试动作示例：
 
 ```bash
 # 下载先验模型权重
@@ -149,8 +157,41 @@ python ./app.py
 # bash ./inference.sh ./configs/inference/human-lrm-500M.yaml LHM-500M ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
 # bash ./inference.sh ./configs/inference/human-lrm-1B.yaml LHM-1B ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
 
+# export animation video
 bash inference.sh ${CONFIG} ${MODEL_NAME} ${IMAGE_PATH_OR_FOLDER}  ${MOTION_SEQ}
+# export mesh 
+bash ./inference_mesh.sh ${CONFIG} ${MODEL_NAME} 
 ```
+### 处理视频动作数据
+
+- 下载动作提取相关的预训练模型权重
+  ```bash
+  wget -P ./pretrained_models/human_model_files/pose_estimate https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/yolov8x.pt
+
+  wget -P ./pretrained_models/human_model_files/pose_estimate https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/vitpose-h-wholebody.pth
+  ```
+
+- 安装额外的依赖
+  ```bash
+  cd ./engine/pose_estimation
+  pip install -v -e third-party/ViTPose
+  pip install ultralytics
+  ```
+
+- 运行以下命令，从视频中提取动作数据
+   ```bash
+   # python ./engine/pose_estimation/video2motion.py --video_path ./train_data/demo.mp4 --output_path ./train_data/custom_motion
+
+   python ./engine/pose_estimation/video2motion.py --video_path ${VIDEO_PATH} --output_path ${OUTPUT_PATH}
+
+   ```
+
+- 使用提取的动作数据驱动数字人
+  ```bash
+  # bash ./inference.sh ./configs/inference/human-lrm-500M.yaml LHM-500M ./train_data/example_imgs/ ./train_data/custom_motion/demo/smplx_params
+
+  bash inference.sh ${CONFIG} ${MODEL_NAME} ${IMAGE_PATH_OR_FOLDER}  ${OUTPUT_PATH}/${VIDEO_NAME}/smplx_params
+  ```
 
 ## 计算指标
 我们提供了简单的指标计算脚本：
@@ -178,7 +219,7 @@ python ./tools/metrics/compute_ssim_lpips.py -f1 ${gt_folder} -f2 ${results_fold
 ## 引用 
 ```
 @inproceedings{qiu2025LHM,
-  title={LHM: Large Animatable Human Reconstruction Model for Single Image to 3D in Seconds},
+  title={LHM: Large Animatable Human Reconstruction Model from a Single Image in Seconds},
   author={Lingteng Qiu and Xiaodong Gu and Peihao Li  and Qi Zuo
      and Weichao Shen and Junfei Zhang and Kejie Qiu and Weihao Yuan
      and Guanying Chen and Zilong Dong and Liefeng Bo 

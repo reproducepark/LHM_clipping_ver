@@ -756,26 +756,6 @@ class ModelHumanLRMSapdinoBodyHeadSD3_5(ModelHumanLRM):
         render_bg_colors,
         smplx_params,
     ):
-        # image: [B, N_ref, C_img, H_img, W_img]
-        # head_image : [B, N_ref, C_img, H_img, W_img]
-        # source_c2ws: [B, N_ref, 4, 4]
-        # source_intrs: [B, N_ref, 4, 4]
-        # render_c2ws: [B, N_source, 4, 4]
-        # render_intrs: [B, N_source, 4, 4]
-        # render_bg_colors: [B, N_source, 3]
-        # smplx_params: Dict, e.g., pose_shape: [B, N_source, 21, 3], betas:[B, 100]
-        assert (
-            image.shape[0] == render_c2ws.shape[0]
-        ), "Batch size mismatch for image and render_c2ws"
-        assert (
-            image.shape[0] == render_bg_colors.shape[0]
-        ), "Batch size mismatch for image and render_bg_colors"
-        assert (
-            image.shape[0] == smplx_params["betas"].shape[0]
-        ), "Batch size mismatch for image and smplx_params"
-        assert (
-            image.shape[0] == smplx_params["body_pose"].shape[0]
-        ), "Batch size mismatch for image and smplx_params"
         assert len(smplx_params["betas"].shape) == 2
 
         if self.facesr:
@@ -848,6 +828,24 @@ class ModelHumanLRMSapdinoBodyHeadSD3_5(ModelHumanLRM):
             else:
                 out[k] = v
         return out
+
+    def animation_infer_gs(self, gs_attr_list, query_points, smplx_params):
+        '''Inference code to query gs mesh.
+        '''
+        batch_size = len(gs_attr_list)
+        for b in range(batch_size):
+            gs_attr = gs_attr_list[b]
+            query_pt = query_points[b]
+
+
+            merge_animatable_gs_model_list, cano_gs_model_list = self.renderer.animate_gs_model(
+                gs_attr,
+                query_pt,
+                self.renderer.get_single_batch_smpl_data(smplx_params, b),
+                debug=False,
+            )
+        
+        return merge_animatable_gs_model_list[0]
 
     def forward_transformer(
         self, image_feats, camera_embeddings, query_points, motion_embed=None

@@ -36,7 +36,7 @@ class DetectionModel(object):
         self.pose_model = init_pose_model(pose_model_cfg, pose_model_ckpt, device=device)
         
         # YOLO
-        bbox_model_ckpt = osp.join(ROOT_DIR, 'checkpoints', 'yolov8x.pt')
+        bbox_model_ckpt = os.path.join(os.path.dirname(pose_model_ckpt), 'yolov8x.pt')
         if with_tracker:
             self.bbox_model = YOLO(bbox_model_ckpt)
         else:

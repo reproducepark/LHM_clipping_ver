@@ -19,7 +19,14 @@ from PIL import Image
 from tqdm.auto import tqdm
 
 from engine.pose_estimation.pose_estimator import PoseEstimator
-from engine.SegmentAPI.SAM import Bbox, SAM2Seg
+from engine.SegmentAPI.base import Bbox
+
+try:
+    from engine.SegmentAPI.SAM import SAM2Seg
+except:
+    print("\033[31mNo SAM2 found! Try using rembg to remove the background. This may slightly degrade the quality of the results!\033[0m")
+    from rembg import remove
+
 from LHM.datasets.cam_utils import (
     build_camera_principle,
     build_camera_standard,
@@ -269,6 +276,7 @@ def parse_configs():
         cfg.save_tmp_dump = os.path.join("exps", "save_tmp", _relative_path)
         cfg.image_dump = os.path.join("exps", "images", _relative_path)
         cfg.video_dump = os.path.join("exps", "videos", _relative_path)  # output path
+        cfg.mesh_dump = os.path.join("exps", "meshs", _relative_path)  # output path
 
     if args.infer is not None:
         cfg_infer = OmegaConf.load(args.infer)
@@ -315,7 +323,10 @@ class HumanLRMInferrer(Inferrer):
         self.pose_estimator = PoseEstimator(
             "./pretrained_models/human_model_files/", device=avaliable_device()
         )
-        self.parsingnet = SAM2Seg()
+        try:
+            self.parsingnet = SAM2Seg()
+        except:
+            self.parsingnet = None 
 
         self.model: ModelHumanLRM = self._build_model(self.cfg).to(self.device)
 
@@ -441,11 +452,113 @@ class HumanLRMInferrer(Inferrer):
 
     @torch.no_grad()
     def parsing(self, img_path):
+
         parsing_out = self.parsingnet(img_path=img_path, bbox=None)
 
         alpha = (parsing_out.masks * 255).astype(np.uint8)
 
         return alpha
+
+    def infer_mesh(
+        self,
+        image_path: str,
+        dump_tmp_dir: str,  
+        dump_mesh_dir: str,
+        shape_param=None,
+    ):
+
+        source_size = self.cfg.source_size
+        aspect_standard = 5.0 / 3
+
+        parsing_mask = self.parsing(image_path)
+
+        # prepare reference image
+        image, _, _ = infer_preprocess_image(
+            image_path,
+            mask=parsing_mask,
+            intr=None,
+            pad_ratio=0,
+            bg_color=1.0,
+            max_tgt_size=896,
+            aspect_standard=aspect_standard,
+            enlarge_ratio=[1.0, 1.0],
+            render_tgt_size=source_size,
+            multiply=14,
+            need_mask=True,
+        )
+        try:
+            src_head_rgb = self.crop_face_image(image_path)
+        except:
+            print("w/o head input!")
+            src_head_rgb = np.zeros((112, 112, 3), dtype=np.uint8)
+
+
+        try:
+            src_head_rgb = cv2.resize(
+                src_head_rgb,
+                dsize=(self.cfg.src_head_size, self.cfg.src_head_size),
+                interpolation=cv2.INTER_AREA,
+            )  # resize to dino size
+        except:
+            src_head_rgb = np.zeros(
+                (self.cfg.src_head_size, self.cfg.src_head_size, 3), dtype=np.uint8
+            )
+        
+
+        src_head_rgb = (
+            torch.from_numpy(src_head_rgb / 255.0).float().permute(2, 0, 1).unsqueeze(0)
+        )  # [1, 3, H, W]
+
+        # save masked image for vis
+        save_ref_img_path = os.path.join(
+            dump_tmp_dir, "refer_" + os.path.basename(image_path)
+        )
+        vis_ref_img = (image[0].permute(1, 2, 0).cpu().detach().numpy() * 255).astype(
+            np.uint8
+        )
+        Image.fromarray(vis_ref_img).save(save_ref_img_path)
+
+        device = "cuda"
+        dtype = torch.float32
+        shape_param = torch.tensor(shape_param, dtype=dtype).unsqueeze(0)
+
+        smplx_params =  dict()
+        # cano pose setting
+        smplx_params['betas'] = shape_param.to(device)
+
+        smplx_params['root_pose'] = torch.zeros(1,1,3).to(device)
+        smplx_params['body_pose'] = torch.zeros(1,1,21, 3).to(device)
+        smplx_params['jaw_pose'] = torch.zeros(1, 1, 3).to(device)
+        smplx_params['leye_pose'] = torch.zeros(1, 1, 3).to(device)
+        smplx_params['reye_pose'] = torch.zeros(1, 1, 3).to(device)
+        smplx_params['lhand_pose'] = torch.zeros(1, 1, 15, 3).to(device)
+        smplx_params['rhand_pose'] = torch.zeros(1, 1, 15, 3).to(device)
+        smplx_params['expr'] = torch.zeros(1, 1, 100).to(device)
+        smplx_params['trans'] = torch.zeros(1, 1, 3).to(device)
+
+        self.model.to(dtype)
+
+        gs_app_model_list, query_points, transform_mat_neutral_pose = self.model.infer_single_view(
+            image.unsqueeze(0).to(device, dtype),
+            src_head_rgb.unsqueeze(0).to(device, dtype),
+            None,
+            None,
+            None,
+            None,
+            None,
+            smplx_params={
+                k: v.to(device) for k, v in smplx_params.items()
+            },
+        )
+        smplx_params['transform_mat_neutral_pose'] = transform_mat_neutral_pose
+
+        output_gs = self.model.animation_infer_gs(gs_app_model_list, query_points, smplx_params)
+
+        output_gs_path = '_'.join(os.path.basename(image_path).split('.')[:-1])+'.ply'
+
+        print(f"save mesh to {output_gs_path}")
+        output_gs.save_ply(os.path.join(dump_mesh_dir, output_gs_path))
+
 
     def infer_single(
         self,
@@ -473,7 +586,13 @@ class HumanLRMInferrer(Inferrer):
         motion_img_need_mask = self.cfg.get("motion_img_need_mask", False)  # False
         vis_motion = self.cfg.get("vis_motion", False)  # False
 
-        parsing_mask = self.parsing(image_path)
+
+        if self.parsingnet is not None:
+            parsing_mask = self.parsing(image_path)
+        else:
+            img_np = cv2.imread(image_path)
+            remove_np = remove(img_np)
+            parsing_mask = remove_np[...,3]
 
         # prepare reference image
         image, _, _ = infer_preprocess_image(
@@ -495,7 +614,6 @@ class HumanLRMInferrer(Inferrer):
             print("w/o head input!")
             src_head_rgb = np.zeros((112, 112, 3), dtype=np.uint8)
 
-        import cv2
 
         try:
             src_head_rgb = cv2.resize(
@@ -571,7 +689,6 @@ class HumanLRMInferrer(Inferrer):
         batch_dict = dict()
         batch_size = 40  # avoid memeory out!
 
-
         for batch_i in range(0, camera_size, batch_size):
             with torch.no_grad():
                 # TODO check device and dtype
@@ -593,6 +710,8 @@ class HumanLRMInferrer(Inferrer):
                     "img_size_wh",
                     "expr",
                 ]
+
+
                 batch_smplx_params = dict()
                 batch_smplx_params["betas"] = shape_param.to(device)
                 batch_smplx_params['transform_mat_neutral_pose'] = transform_mat_neutral_pose
@@ -633,6 +752,8 @@ class HumanLRMInferrer(Inferrer):
         rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
 
         os.makedirs(os.path.dirname(dump_video_path), exist_ok=True)
+
+        print(f"save video to {dump_video_path}")
 
         images_to_video(
             rgb,
@@ -692,24 +813,38 @@ class HumanLRMInferrer(Inferrer):
                 self.cfg.image_dump,
                 subdir_path,
             )
+            dump_mesh_dir = os.path.join(
+                self.cfg.mesh_dump,
+                subdir_path,
+            )
             dump_tmp_dir = os.path.join(self.cfg.image_dump, subdir_path, "tmp_res")
             os.makedirs(dump_image_dir, exist_ok=True)
             os.makedirs(dump_tmp_dir, exist_ok=True)
+            os.makedirs(dump_mesh_dir, exist_ok=True)
 
             shape_pose = self.pose_estimator(image_path)
             assert shape_pose.is_full_body, f"The input image is illegal, {shape_pose.msg}"
-            self.infer_single(
-                image_path,
-                motion_seqs_dir=self.cfg.motion_seqs_dir,
-                motion_img_dir=self.cfg.motion_img_dir,
-                motion_video_read_fps=self.cfg.motion_video_read_fps,
-                export_video=self.cfg.export_video,
-                export_mesh=self.cfg.export_mesh,
-                dump_tmp_dir=dump_tmp_dir,
-                dump_image_dir=dump_image_dir,
-                dump_video_path=dump_video_path,
-                shape_param=shape_pose.beta,
-            )
+
+            if self.cfg.export_mesh is not None:
+                self.infer_mesh(
+                    image_path,
+                    dump_tmp_dir=dump_tmp_dir,
+                    dump_mesh_dir=dump_mesh_dir,
+                    shape_param=shape_pose.beta,
+                )
+            else:
+                self.infer_single(
+                    image_path,
+                    motion_seqs_dir=self.cfg.motion_seqs_dir,
+                    motion_img_dir=self.cfg.motion_img_dir,
+                    motion_video_read_fps=self.cfg.motion_video_read_fps,
+                    export_video=self.cfg.export_video,
+                    export_mesh=self.cfg.export_mesh,
+                    dump_tmp_dir=dump_tmp_dir,
+                    dump_image_dir=dump_image_dir,
+                    dump_video_path=dump_video_path,
+                    shape_param=shape_pose.beta,
+                )
 
 
 @REGISTRY_RUNNERS.register("infer.human_lrm_video")
@@ -764,7 +899,6 @@ class HumanLRMVideoInferrer(HumanLRMInferrer):
         )
         src_head_rgb = self.crop_face_image(image_path)
 
-        import cv2
 
         try:
             src_head_rgb = cv2.resize(

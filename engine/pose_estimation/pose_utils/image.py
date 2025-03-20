@@ -13,6 +13,21 @@ IMG_NORM_MEAN = [0.485, 0.456, 0.406]
 IMG_NORM_STD = [0.229, 0.224, 0.225]
 
 
+def img_center_padding(img_np, pad_ratio):
+
+    ori_w, ori_h = img_np.shape[:2]
+
+    w = round((1 + pad_ratio) * ori_w)
+    h = round((1 + pad_ratio) * ori_h)
+
+    img_pad_np = np.zeros((w, h, 3), dtype=np.uint8)
+    offset_h, offset_w = (w - img_np.shape[0]) // 2, (h - img_np.shape[1]) // 2
+    img_pad_np[
+        offset_h : offset_h + img_np.shape[0] :, offset_w : offset_w + img_np.shape[1]
+    ] = img_np
+
+    return img_pad_np, offset_w, offset_h
+
 def normalize_rgb_tensor(img, imgenet_normalization=True):
     img = img / 255.
     if imgenet_normalization:

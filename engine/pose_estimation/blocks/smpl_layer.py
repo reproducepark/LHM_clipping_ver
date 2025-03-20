@@ -2,20 +2,14 @@
 # Copyright (c) 2024-present NAVER Corp.
 # CC BY-NC-SA 4.0 license
 
-import torch
-from torch import nn
-from torch import nn
+import pose_utils
+import roma
 import smplx
 import torch
-import numpy as np
-import pose_utils
 from pose_utils import inverse_perspective_projection, perspective_projection
-import roma
-import pickle
-import os
-from pose_utils.constants_service import SMPLX_DIR
 from pose_utils.rot6d import rotation_6d_to_matrix
 from smplx.lbs import vertices2joints
+from torch import nn
 
 
 class SMPL_Layer(nn.Module):
@@ -42,7 +36,12 @@ class SMPL_Layer(nn.Module):
         self.kid = kid
         self.num_betas = num_betas
         self.bm_x = smplx.create(
-            smpl_dir, "smplx", gender=gender, use_pca=False, flat_hand_mean=True, num_betas=num_betas
+            smpl_dir,
+            "smplx",
+            gender=gender,
+            use_pca=False,
+            flat_hand_mean=True,
+            num_betas=num_betas,
         )
 
         # Primary keypoint - root
@@ -78,7 +77,10 @@ class SMPL_Layer(nn.Module):
             assert pose.shape[0] == shape.shape[0] == loc.shape[0] == dist.shape[0]
         POSE_TYPE_LENGTH = 6 if rot6d else 3
         if self.type == "smpl":
-            assert len(pose.shape) == 3 and list(pose.shape[1:]) == [24, POSE_TYPE_LENGTH]
+            assert len(pose.shape) == 3 and list(pose.shape[1:]) == [
+                24,
+                POSE_TYPE_LENGTH,
+            ]
         elif self.type == "smplx":
             assert len(pose.shape) == 3 and list(pose.shape[1:]) == [
                 53,
@@ -87,7 +89,8 @@ class SMPL_Layer(nn.Module):
         else:
             raise NameError
         assert len(shape.shape) == 2 and (
-            list(shape.shape[1:]) == [self.num_betas] or list(shape.shape[1:]) == [self.num_betas + 1]
+            list(shape.shape[1:]) == [self.num_betas]
+            or list(shape.shape[1:]) == [self.num_betas + 1]
         )
         if loc is not None and dist is not None:
             assert len(loc.shape) == 2 and list(loc.shape[1:]) == [2]
@@ -146,7 +149,9 @@ class SMPL_Layer(nn.Module):
                 )[:, 0]
                 transl = transl.half()
             else:
-                transl = inverse_perspective_projection(loc.unsqueeze(1), K, dist.unsqueeze(1))[:, 0]
+                transl = inverse_perspective_projection(
+                    loc.unsqueeze(1), K, dist.unsqueeze(1)
+                )[:, 0]
 
         # Updating transl if we choose a certain person center
         transl_up = transl.clone()
@@ -179,7 +184,9 @@ class SMPL_Layer(nn.Module):
                 "j2d": j2d,
                 "v2d": v2d,
                 "transl": transl,  # translation of the primary keypoint
-                "transl_pelvis": transl.unsqueeze(1) - person_center - pelvis, # root=pelvis
+                "transl_pelvis": transl.unsqueeze(1)
+                - person_center
+                - pelvis,  # root=pelvis
                 "j3d_world": output.joints,
             }
         )
@@ -199,7 +206,7 @@ class SMPL_Layer(nn.Module):
             kwargs_pose["left_hand_pose"] = pose[:, 22:37].flatten(1)
             kwargs_pose["right_hand_pose"] = pose[:, 37:52].flatten(1)
             kwargs_pose["jaw_pose"] = pose[:, 52:53].flatten(1)
-        elif J==55:
+        elif J == 55:
             kwargs_pose["global_orient"] = self.bm_x.global_orient.repeat(N, 1)
             kwargs_pose["body_pose"] = pose[:, 1:22].flatten(1)
             kwargs_pose["left_hand_pose"] = pose[:, 25:40].flatten(1)
@@ -215,6 +222,7 @@ class SMPL_Layer(nn.Module):
 
         output = self.bm_x(**kwargs_pose)
         return output
+
     def convert_standard_pose(self, poses):
         # pose: N, J, 3
         n = poses.shape[0]

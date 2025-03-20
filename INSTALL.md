@@ -57,3 +57,17 @@ pip install ./simple-knn
 ```
 
 ## 6. Please then follow the [Pytorch3D](https://github.com/facebookresearch/pytorch3d) to install Pytorch3D lib.
+
+## Windows Installation  
+Follow these steps to install all dependencies automatically on Windows.  
+
+### **1. Install Python 3.10**  
+- Download and install **Python 3.10** from [python.org](https://www.python.org/downloads/release/python-3100/).    
+
+### **2. Set Up a Virtual Environment**  
+Open **Command Prompt (CMD)**, navigate to the project folder, and run:  
+```bash
+python -m venv lhm_env
+lhm_env\Scripts\activate
+install_cu121.bat
+```

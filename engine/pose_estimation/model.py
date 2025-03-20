@@ -41,6 +41,63 @@ def unravel_index(index, shape):
     return tuple(reversed(out))
 
 
+def load_model(ckpt_path, model_path, device=torch.device("cuda")):
+    """Open a checkpoint, build Multi-HMR using saved arguments, load the model weigths."""
+    # Model
+
+    assert os.path.isfile(ckpt_path), f"{ckpt_path} not found"
+
+    # Load weights
+    ckpt = torch.load(ckpt_path, map_location=device)
+
+    # Get arguments saved in the checkpoint to rebuild the model
+    kwargs = {}
+    for k, v in vars(ckpt["args"]).items():
+        kwargs[k] = v
+    print(ckpt["args"].img_size)
+    # Build the model.
+    if isinstance(ckpt["args"].img_size, list):
+        kwargs["img_size"] = ckpt["args"].img_size[0]
+    else:
+        kwargs["img_size"] = ckpt["args"].img_size
+    kwargs["smplx_dir"] = model_path
+    print("Loading model...")
+    model = Model(**kwargs).to(device)
+    print("Model loaded")
+    # Load weights into model.
+    model.load_state_dict(ckpt["model_state_dict"], strict=False)
+    model.output_mesh = True
+    model.eval()
+    return model
+
+
+def forward_model(
+    model,
+    input_image,
+    camera_parameters,
+    det_thresh=0.3,
+    nms_kernel_size=1,
+    pseudo_idx=None,
+    max_dist=None,
+):
+    """Make a forward pass on an input image and camera parameters."""
+
+    # Forward the model.
+    with torch.no_grad():
+        with torch.cuda.amp.autocast(enabled=True):
+            humans = model(
+                input_image,
+                is_training=False,
+                nms_kernel_size=int(nms_kernel_size),
+                det_thresh=det_thresh,
+                K=camera_parameters,
+                idx=pseudo_idx,
+                max_dist=max_dist,
+            )
+
+    return humans
+
+
 class Model(nn.Module):
     """A ViT backbone followed by a "HPH" head (stack of cross attention layers with queries corresponding to detected humans.)"""
 
@@ -220,26 +277,6 @@ class Model(nn.Module):
                     idx = (idx[0][mask], idx[1][mask], idx[2][mask], idx[3][mask])
                 else:
                     idx = (idx[0][mask], idx[1][mask], idx[2][mask], idx[3][mask])
-            # elif bbox is not None:
-            #     mask = (idx[1] >= bbox[1]) & (idx[1] >= bbox[3]) & (idx[2] >= bbox[0]) & (idx[2] <= bbox[2])
-            #     idx_num = torch.sum(mask)
-            #     if idx_num < 1:
-            #         top = torch.clamp(bbox[1], min=0, max=_scores.shape[1]-1)
-            #         bottom = torch.clamp(bbox[3], min=0, max=_scores.shape[1]-1)
-            #         left = torch.clamp(bbox[0], min=0, max=_scores.shape[2]-1)
-            #         right = torch.clamp(bbox[2], min=0, max=_scores.shape[2]-1)
-
-            #         neigborhoods = _scores[:, top:bottom, left:right, :]
-            #         idx = torch.argmax(neigborhoods)
-            #         try:
-            #             idx = unravel_index(idx, neigborhoods.shape)
-            #         except Exception as e:
-            #             print(pseudo_idx)
-            #             raise e
-
-            #         idx = (idx[0], idx[1] + top, idx[2] + left, idx[3])
-            #     else:
-            #         idx = (idx[0][mask], idx[1][mask], idx[2][mask], idx[3][mask])
         else:
             assert idx is not None  # training time
         # Scores

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @Organization  : Alibaba XR-Lab
 # @Author        : Peihao Li
-# @Email         : 220019047@link.cuhk.edu.cn
+# @Email         : liphao99@gmail.com
 # @Time          : 2025-03-11 12:47:58
 # @Function      : inference code for pose estimation
 
@@ -16,10 +16,9 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image
-
 from engine.ouputs import BaseOutput
-from engine.pose_estimation.model import Model
+from engine.pose_estimation.model import load_model
+from PIL import Image
 
 IMG_NORM_MEAN = [0.485, 0.456, 0.406]
 IMG_NORM_STD = [0.229, 0.224, 0.225]
@@ -39,57 +38,6 @@ def normalize_rgb_tensor(img, imgenet_normalization=True):
             img - torch.tensor(IMG_NORM_MEAN, device=img.device).view(1, 3, 1, 1)
         ) / torch.tensor(IMG_NORM_STD, device=img.device).view(1, 3, 1, 1)
     return img
-
-
-def load_model(ckpt_path, model_path, device=torch.device("cuda")):
-    """Open a checkpoint, build Multi-HMR using saved arguments, load the model weigths."""
-    # Model
-
-    assert os.path.isfile(ckpt_path), f"{ckpt_path} not found"
-
-    # Load weights
-    ckpt = torch.load(ckpt_path, map_location=device)
-
-    # Get arguments saved in the checkpoint to rebuild the model
-    kwargs = {}
-    for k, v in vars(ckpt["args"]).items():
-        kwargs[k] = v
-    print(ckpt["args"].img_size)
-    # Build the model.
-    if isinstance(ckpt["args"].img_size, list):
-        kwargs["img_size"] = ckpt["args"].img_size[0]
-    else:
-        kwargs["img_size"] = ckpt["args"].img_size
-    kwargs["smplx_dir"] = model_path
-    print("Loading model...")
-    model = Model(**kwargs).to(device)
-    print("Model loaded")
-    # Load weights into model.
-    model.load_state_dict(ckpt["model_state_dict"], strict=False)
-    model.output_mesh = True
-    model.eval()
-    return model
-
-
-def inverse_perspective_projection(points, K, distance):
-    """
-    This function computes the inverse perspective projection of a set of points given an estimated distance.
-    Input:
-        points (bs, N, 2): 2D points
-        K (bs,3,3): camera intrinsics params
-        distance (bs, N, 1): distance in the 3D world
-    Similar to:
-        - pts_l_norm = cv2.undistortPoints(np.expand_dims(pts_l, axis=1), cameraMatrix=K_l, distCoeffs=None)
-    """
-    # Apply camera intrinsics
-    points = torch.cat([points, torch.ones_like(points[..., :1])], -1)
-    points = torch.einsum("bij,bkj->bki", torch.inverse(K), points)
-
-    # Apply perspective distortion
-    if distance is None:
-        return points
-    points = points * distance
-    return points
 
 
 class PoseEstimator:
@@ -182,6 +130,8 @@ class PoseEstimator:
         img_np = np.asarray(Image.open(img_path).convert("RGB"))
 
         raw_h, raw_w, _ = img_np.shape
+
+        # pad image for more accurate pose estimation
         img_np, offset_w, offset_h = self.img_center_padding(img_np)
         img_tensor, annotation = self._preprocess(img_np)
         K = self.get_camera_parameters()
@@ -198,10 +148,14 @@ class PoseEstimator:
             )
         if not len(target_human) == 1:
             return SMPLXOutput(
-            beta=None,
-            is_full_body=False,
-            msg="more than one human detected" if len(target_human) > 1 else "no human detected",
-        )
+                beta=None,
+                is_full_body=False,
+                msg=(
+                    "more than one human detected"
+                    if len(target_human) > 1
+                    else "no human detected"
+                ),
+            )
 
         # check is full body
         pad_left, pad_top, scale_factor, _, _ = annotation
