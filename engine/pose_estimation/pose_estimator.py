@@ -16,9 +16,10 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import torch.nn.functional as F
+from PIL import Image
+
 from engine.ouputs import BaseOutput
 from engine.pose_estimation.model import load_model
-from PIL import Image
 
 IMG_NORM_MEAN = [0.485, 0.456, 0.406]
 IMG_NORM_STD = [0.229, 0.224, 0.225]
@@ -28,6 +29,7 @@ IMG_NORM_STD = [0.229, 0.224, 0.225]
 class SMPLXOutput(BaseOutput):
     beta: np.ndarray
     is_full_body: bool
+    ratio: float
     msg: str
 
 
@@ -166,22 +168,17 @@ class PoseEstimator:
         ) / scale_factor
         j2d = j2d - torch.tensor([offset_w, offset_h], device=self.device).unsqueeze(0)
 
-        # enable the full body contains 95% of the image
-        scale_ratio = 0.025
-
-        is_full_body = (
-            (
-                (j2d[..., 0] >= 0 - raw_w * scale_ratio)
-                & (j2d[..., 0] < raw_w * (1 + scale_ratio))
-                & (j2d[..., 1] >= 0 - raw_h * scale_ratio)
-                & (j2d[..., 1] < raw_h * (1 + scale_ratio))
-            )
-            .all(dim=-1)
-            .item()
-        )
+        # scale ratio
+        top = j2d[..., 1].min()
+        bottom = j2d[..., 1].max()
+        full_body_length = bottom - top
+        visible_body_length = min(raw_h, bottom) - max(0, top)
+        visible_ratio = visible_body_length / full_body_length
+        is_full_body = visible_ratio.cpu().item() >= 0.4  # suppose (upper / the lenght of body = 0.4,  4: 6)
 
         return SMPLXOutput(
             beta=target_human[0]["shape"].cpu().numpy(),
             is_full_body=is_full_body,
+            ratio=visible_ratio.cpu().item(),
             msg="success" if is_full_body else "no full-body human detected",
         )

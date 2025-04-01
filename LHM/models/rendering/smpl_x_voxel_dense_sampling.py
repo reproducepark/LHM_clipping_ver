@@ -233,20 +233,11 @@ class SMPLX_Mesh(object):
                 self.joints_name.index("R_Foot"),
                 self.joints_name.index("L_Foot"),
             ],
-            "upper_body": [
-                self.joints_name.index("Spine_1"),
-                self.joints_name.index("Spine_2"),
-                self.joints_name.index("Spine_3"),
-                self.joints_name.index("L_Collar"),
-                self.joints_name.index("R_Collar"),
-                self.joints_name.index("L_Shoulder"),
-                self.joints_name.index("R_Shoulder"),
-                self.joints_name.index("L_Elbow"),
-                self.joints_name.index("R_Elbow"),
-                self.joints_name.index("L_Wrist"),
-                self.joints_name.index("R_Wrist"),
-            ],
         }
+
+
+        self.joint_part['upper_body']= self.upper_body_label()
+
 
         self.lower_body_vertex_idx = self.get_body("lower_body")
         self.upper_body_vertex_idx = self.get_body("upper_body")
@@ -264,10 +255,64 @@ class SMPLX_Mesh(object):
         self.neutral_jaw_pose = torch.FloatTensor([1 / 3, 0, 0])
 
         # subdivider
-
         self.body_head_mapping = self.get_body_face_mapping()
 
         self.register_constrain_prior()
+    
+    def upper_body_label(self):
+
+        upper_body_name = [
+            "Pelvis",
+            "Spine_1",
+            "Spine_2",
+            "Spine_3",
+            "L_Collar",
+            "R_Collar",
+            "L_Shoulder",  # 16
+            "R_Shoulder",  # 17
+            "L_Elbow",
+            "R_Elbow",
+            "L_Wrist",
+            "R_Wrist",  # body joints
+            "L_Index_1",
+            "L_Index_2",
+            "L_Index_3",
+            "L_Middle_1",
+            "L_Middle_2",
+            "L_Middle_3",
+            "L_Pinky_1",
+            "L_Pinky_2",
+            "L_Pinky_3",
+            "L_Ring_1",
+            "L_Ring_2",
+            "L_Ring_3",
+            "L_Thumb_1",
+            "L_Thumb_2",
+            "L_Thumb_3",  # left hand joints
+            "R_Index_1",
+            "R_Index_2",
+            "R_Index_3",
+            "R_Middle_1",
+            "R_Middle_2",
+            "R_Middle_3",
+            "R_Pinky_1",
+            "R_Pinky_2",
+            "R_Pinky_3",
+            "R_Ring_1",
+            "R_Ring_2",
+            "R_Ring_3",
+            "R_Thumb_1",
+            "R_Thumb_2",
+            "R_Thumb_3",  # right hand joints
+        ]
+
+        upper_body_idx_list  = []
+        for upper_name in upper_body_name:
+            upper_idx = self.joints_name.index(upper_name)
+            upper_body_idx_list.append(upper_idx)
+
+
+        return upper_body_idx_list 
 
     def register_constrain_prior(self):
         """As video cannot provide insufficient supervision for the canonical space, we add some human prior to constrain the rotation. Although it is a trick, it is very effective."""
@@ -1729,8 +1774,8 @@ def generate_smplx_point():
 
     # save_ply("warp_posed.ply", warp_posed[0].detach().cpu())
     save_ply(
-        "body_constrain_posed.ply",
-        warp_posed[0, smplx_model.is_constrain_body].detach().cpu(),
+        "is_upper_body_posed.ply",
+        warp_posed[0, smplx_model.is_upper_body].detach().cpu(),
     )
 
 

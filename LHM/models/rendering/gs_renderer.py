@@ -454,9 +454,12 @@ class GSLayer(nn.Module):
         # gs_attr.opacity[is_hand] = gs_attr.opacity[is_hand].clamp(min=0.95)
 
         # body scaling constrain
-        is_constrain_body = constrain_dict['is_constrain_body']
+        # is_constrain_body = constrain_dict['is_constrain_body']
+        is_upper_body = constrain_dict['is_upper_body']
         scaling = ret['scaling'] 
-        scaling[is_constrain_body] = scaling[is_constrain_body].clamp(max = 0.02)
+        # scaling[is_constrain_body] body_constrain= scaling[is_constrain_body].clamp(max = 0.02)
+        scaling[is_upper_body] = scaling[is_upper_body].clamp(max = 0.02)
+        # scaling = scaling.clamp(max=0.02)
         ret['scaling'] = scaling
 
         return ret
@@ -1052,6 +1055,7 @@ class GS3DRenderer(nn.Module):
             rigid_rotation_matrix[:, is_constrain_body] = I
             rotation_neutral_pose = gs_attr.rotation.unsqueeze(0).repeat(num_view, 1, 1)
 
+
             # TODO do not move underarm gs
 
             # QUATERNION MULTIPLY
@@ -1095,10 +1099,12 @@ class GS3DRenderer(nn.Module):
         # NOTE that gs_attr contains offset xyz
         is_constrain_body = self.smplx_model.is_constrain_body
         is_hands =  self.smplx_model.is_rhand + self.smplx_model.is_lhand 
+        is_upper_body = self.smplx_model.is_upper_body
 
         constrain_dict=dict(
             is_constrain_body=is_constrain_body,
-            is_hands=is_hands
+            is_hands=is_hands,
+            is_upper_body=is_upper_body,
         )
 
         gs_attr: GaussianAppOutput = self.gs_net(x, query_points, x_fine, constrain_dict)

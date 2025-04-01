@@ -20,6 +20,7 @@ from tqdm.auto import tqdm
 
 from engine.pose_estimation.pose_estimator import PoseEstimator
 from engine.SegmentAPI.base import Bbox
+from LHM.utils.model_download_utils import AutoModelQuery
 
 try:
     from engine.SegmentAPI.SAM import SAM2Seg
@@ -48,7 +49,14 @@ from LHM.utils.face_detector import FaceDetector
 from LHM.utils.ffmpeg_utils import images_to_video
 from LHM.utils.hf_hub import wrap_model_hub
 from LHM.utils.logging import configure_logger
-from LHM.utils.model_card import MODEL_CARD, MODEL_PATH
+from LHM.utils.model_card import MODEL_CARD, MODEL_CONFIG
+
+
+def prior_check():
+    if not os.path.exists('./pretrained_models'):
+        prior_data = MODEL_CARD['prior_model']
+        download_extract_tar_from_url(prior_data)
+
 
 from .base_inferrer import Inferrer
 
@@ -63,7 +71,6 @@ def avaliable_device():
         device = "cpu"
 
     return device
-
 
 def resize_with_padding(img, target_size, padding_color=(255, 255, 255)):
     target_w, target_h = target_size
@@ -112,7 +119,6 @@ def get_bbox(mask):
     ]
 
     box = Bbox(whwh)
-
     # scale box to 1.05
     scale_box = box.scale(1.1, width=width, height=height)
     return scale_box
@@ -123,7 +129,19 @@ def query_model_name(model_name):
         if not os.path.exists(model_path):
             model_url = MODEL_CARD[model_name]
             download_extract_tar_from_url(model_url, './')
+    else:
+        model_path = model_name
+    
     return model_path
+
+
+def query_model_config(model_name):
+    try:
+        model_params = model_name.split('-')[1]
+        
+        return MODEL_CONFIG[model_params] 
+    except:
+        return None
 
 def infer_preprocess_image(
     rgb_path,
@@ -159,12 +177,11 @@ def infer_preprocess_image(
     cur_ratio = h / w
     scale_ratio = cur_ratio / aspect_standard
 
+
     target_w = int(min(w * scale_ratio, h))
-    offset_w = (target_w - w) // 2
+    if target_w - w >0:
+        offset_w = (target_w - w) // 2
 
-    # resize to target ratio.
-
-    if offset_w > 0:
         rgb = np.pad(
             rgb,
             ((0, 0), (offset_w, offset_w), (0, 0)),
@@ -179,9 +196,22 @@ def infer_preprocess_image(
             constant_values=0,
         )
     else:
-        offset_w = -offset_w 
-        rgb = rgb[:,offset_w:-offset_w,:]
-        mask = mask[:,offset_w:-offset_w]
+        target_h = w * aspect_standard
+        offset_h = int(target_h - h)
+
+        rgb = np.pad(
+            rgb,
+            ((offset_h, 0), (0, 0), (0, 0)),
+            mode="constant",
+            constant_values=255,
+        )
+
+        mask = np.pad(
+            mask,
+            ((offset_h, 0), (0, 0)),
+            mode="constant",
+            constant_values=0,
+        )
 
     rgb = rgb / 255.0  # normalize to [0, 1]
     mask = mask / 255.0
@@ -242,12 +272,13 @@ def infer_preprocess_image(
 def parse_configs():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str)
     parser.add_argument("--infer", type=str)
     args, unknown = parser.parse_known_args()
 
     cfg = OmegaConf.create()
     cli_cfg = OmegaConf.from_cli(unknown)
+
+    query_model = AutoModelQuery()
 
     # parse from ENV
     if os.environ.get("APP_INFER") is not None:
@@ -257,10 +288,13 @@ def parse_configs():
         cli_cfg.model_name = os.environ.get("APP_MODEL_NAME")
     else:
         model_name = cli_cfg.model_name
-        cli_cfg.model_name = query_model_name(model_name)
+        model_path= query_model.query(model_name) 
+        cli_cfg.model_name = model_path 
+    
+    model_config = query_model_config(model_name)
 
-    if args.config is not None:
-        cfg_train = OmegaConf.load(args.config)
+    if model_config is not None:
+        cfg_train = OmegaConf.load(model_config)
         cfg.source_size = cfg_train.dataset.source_image_res
         try:
             cfg.src_head_size = cfg_train.dataset.src_head_size
@@ -315,6 +349,9 @@ class HumanLRMInferrer(Inferrer):
             stream_level=self.cfg.logger,
             log_level=self.cfg.logger,
         )  # logger function
+
+        # if do not download prior model, we automatically download them.
+        prior_check()
 
         self.facedetect = FaceDetector(
             "./pretrained_models/gagatracker/vgghead/vgg_heads_l.trcd",
@@ -593,6 +630,7 @@ class HumanLRMInferrer(Inferrer):
             img_np = cv2.imread(image_path)
             remove_np = remove(img_np)
             parsing_mask = remove_np[...,3]
+        
 
         # prepare reference image
         image, _, _ = infer_preprocess_image(
@@ -735,6 +773,7 @@ class HumanLRMInferrer(Inferrer):
 
             comp_rgb = res["comp_rgb"] # [Nv, H, W, 3], 0-1
             comp_mask = res["comp_mask"] # [Nv, H, W, 3], 0-1
+
             comp_mask[comp_mask < 0.5] = 0.0
 
             batch_rgb = comp_rgb * comp_mask + (1 - comp_mask) * 1
@@ -819,7 +858,11 @@ class HumanLRMInferrer(Inferrer):
             os.makedirs(dump_mesh_dir, exist_ok=True)
 
             shape_pose = self.pose_estimator(image_path)
-            assert shape_pose.is_full_body, f"The input image is illegal, {shape_pose.msg}"
+
+            try:
+                assert shape_pose.ratio>0.4, f"body ratio is too small: {shape_pose.ratio}"
+            except:
+                continue
 
             if self.cfg.export_mesh is not None:
                 self.infer_mesh(

@@ -103,6 +103,11 @@ if __name__ == "__main__":
         cfg.experiment.child,
         f"step_{loaded_step:06d}",
     )
+
+    del hf_model.fine_encoder
+    del hf_model.id_face_net
+    del hf_model.faceESRGAN 
+
     print(f"Saving locally to {dump_path}")
     smart_makedirs(dump_path, exist_ok=True)
     hf_model.save_pretrained(

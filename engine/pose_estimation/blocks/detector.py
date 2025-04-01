@@ -2,21 +2,17 @@ from __future__ import annotations
 
 import os
 import os.path as osp
-from collections import defaultdict
+import pdb
 import time
-from mmpose.apis.inference import batch_inference_pose_model
+from collections import defaultdict
 
 import numpy as np
+import scipy.signal as signal
 import torch
 import torch.nn as nn
-import scipy.signal as signal
-
+from mmpose.apis import get_track_id, init_pose_model, vis_pose_result
+from mmpose.apis.inference import batch_inference_pose_model
 from ultralytics import YOLO
-from mmpose.apis import (
-    init_pose_model,
-    get_track_id,
-    vis_pose_result,
-)
 
 ROOT_DIR = osp.abspath(f"{__file__}/../../")
 VIT_DIR = osp.join(ROOT_DIR, "third-party/ViTPose")
@@ -32,6 +28,10 @@ class DetectionModel(object):
         
         # ViTPose
         pose_model_cfg = osp.join(VIT_DIR, 'configs/wholebody/2d_kpt_sview_rgb_img/topdown_heatmap/coco-wholebody/ViTPose_huge_wholebody_256x192.py')
+        if not os.path.exists(pose_model_ckpt):
+            os.system(f"wget -P ./pretrained_models/human_model_files/pose_estimate https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LHM/yolov8x.pt")
+            os.system(f"wget -P ./pretrained_models/human_model_files/pose_estimate https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LHM/vitpose-h-wholebody.pth")
+
         #'vitpose-h-multi-coco.pth')
         self.pose_model = init_pose_model(pose_model_cfg, pose_model_ckpt, device=device)
         

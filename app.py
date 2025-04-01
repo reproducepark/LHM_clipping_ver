@@ -37,6 +37,7 @@ from omegaconf import OmegaConf
 
 from engine.pose_estimation.pose_estimator import PoseEstimator
 from engine.SegmentAPI.base import Bbox
+from LHM.utils.model_download_utils import AutoModelQuery
 
 try:
     from engine.SegmentAPI.SAM import SAM2Seg
@@ -53,9 +54,23 @@ from LHM.runners.infer.utils import (
 from LHM.utils.download_utils import download_extract_tar_from_url
 from LHM.utils.face_detector import VGGHeadDetector
 from LHM.utils.ffmpeg_utils import images_to_video
+from LHM.utils.gpu_utils import check_single_gpu_memory
 from LHM.utils.hf_hub import wrap_model_hub
-from LHM.utils.model_card import MODEL_CARD, MODEL_PATH
+from LHM.utils.model_card import MODEL_CARD, MODEL_CONFIG
 
+
+def query_model_config(model_name):
+    try:
+        model_params = model_name.split('-')[1]
+        
+        return MODEL_CONFIG[model_params] 
+    except:
+        return None
+
+def prior_check():
+    if not os.path.exists('./pretrained_models'):
+        prior_data = MODEL_CARD['prior_model']
+        download_extract_tar_from_url(prior_data)
 
 def get_bbox(mask):
     height, width = mask.shape
@@ -79,15 +94,6 @@ def get_bbox(mask):
     scale_box = box.scale(1.1, width=width, height=height)
     return scale_box
 
-def query_model_name(model_name):
-    if model_name in MODEL_PATH:
-        model_path = MODEL_PATH[model_name]
-        if not os.path.exists(model_path):
-            model_url = MODEL_CARD[model_name]
-            download_extract_tar_from_url(model_url, './')
-    else:
-        model_path = model_name
-    return model_path
 
 def infer_preprocess_image(
     rgb_path,
@@ -118,21 +124,24 @@ def infer_preprocess_image(
     rgb = rgb[bbox_list[1] : bbox_list[3], bbox_list[0] : bbox_list[2]]
     mask = mask[bbox_list[1] : bbox_list[3], bbox_list[0] : bbox_list[2]]
 
+
     h, w, _ = rgb.shape
     assert w < h
     cur_ratio = h / w
     scale_ratio = cur_ratio / aspect_standard
 
+
     target_w = int(min(w * scale_ratio, h))
-    offset_w = (target_w - w) // 2
-    # resize to target ratio.
-    if offset_w > 0:
+    if target_w - w >0:
+        offset_w = (target_w - w) // 2
+
         rgb = np.pad(
             rgb,
             ((0, 0), (offset_w, offset_w), (0, 0)),
             mode="constant",
             constant_values=255,
         )
+
         mask = np.pad(
             mask,
             ((0, 0), (offset_w, offset_w)),
@@ -140,25 +149,22 @@ def infer_preprocess_image(
             constant_values=0,
         )
     else:
-        offset_w = -offset_w 
-        rgb = rgb[:,offset_w:-offset_w,:]
-        mask = mask[:,offset_w:-offset_w]
+        target_h = w * aspect_standard
+        offset_h = int(target_h - h)
 
-    # resize to target ratio.
+        rgb = np.pad(
+            rgb,
+            ((offset_h, 0), (0, 0), (0, 0)),
+            mode="constant",
+            constant_values=255,
+        )
 
-    rgb = np.pad(
-        rgb,
-        ((0, 0), (offset_w, offset_w), (0, 0)),
-        mode="constant",
-        constant_values=255,
-    )
-
-    mask = np.pad(
-        mask,
-        ((0, 0), (offset_w, offset_w)),
-        mode="constant",
-        constant_values=0,
-    )
+        mask = np.pad(
+            mask,
+            ((offset_h, 0), (0, 0)),
+            mode="constant",
+            constant_values=0,
+        )
 
     rgb = rgb / 255.0  # normalize to [0, 1]
     mask = mask / 255.0
@@ -215,30 +221,28 @@ def infer_preprocess_image(
     )  # [1, 1, H, W]
     return rgb, mask, intr
 
+
+
 def parse_configs():
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str)
-    parser.add_argument("--infer", type=str)
-    args, unknown = parser.parse_known_args()
-
+    cli_cfg = OmegaConf.create()
     cfg = OmegaConf.create()
-    cli_cfg = OmegaConf.from_cli(unknown)
+
+    query_model = AutoModelQuery()
 
     # parse from ENV
-    if os.environ.get("APP_INFER") is not None:
-        args.infer = os.environ.get("APP_INFER")
     if os.environ.get("APP_MODEL_NAME") is not None:
-        model_name = query_model_name(os.environ.get("APP_MODEL_NAME"))
-        cli_cfg.model_name = model_name
+        model_path = query_model.query(os.environ.get("APP_MODEL_NAME"))
+        model_name = os.environ.get("APP_MODEL_NAME")
     else:
-        model_name = cli_cfg.model_name
-        cli_cfg.model_name = query_model_name(model_name)
+        raise NotImplementedError
 
-    args.config = args.infer if args.config is None else args.config
+    cli_cfg.model_name = model_path 
 
-    if args.config is not None:
-        cfg_train = OmegaConf.load(args.config)
+    model_config = query_model_config(model_name)
+
+    if model_config is not None:
+        cfg_train = OmegaConf.load(model_config)
         cfg.source_size = cfg_train.dataset.source_image_res
         try:
             cfg.src_head_size = cfg_train.dataset.src_head_size
@@ -255,18 +259,6 @@ def parse_configs():
         cfg.image_dump = os.path.join("exps", "images", _relative_path)
         cfg.video_dump = os.path.join("exps", "videos", _relative_path)  # output path
 
-    if args.infer is not None:
-        cfg_infer = OmegaConf.load(args.infer)
-        cfg.merge_with(cfg_infer)
-        cfg.setdefault(
-            "save_tmp_dump", os.path.join("exps", cli_cfg.model_name, "save_tmp")
-        )
-        cfg.setdefault("image_dump", os.path.join("exps", cli_cfg.model_name, "images"))
-        cfg.setdefault(
-            "video_dump", os.path.join("dumps", cli_cfg.model_name, "videos")
-        )
-        cfg.setdefault("mesh_dump", os.path.join("dumps", cli_cfg.model_name, "meshes"))
-
     cfg.motion_video_read_fps = 6
     cfg.merge_with(cli_cfg)
 
@@ -276,6 +268,7 @@ def parse_configs():
 
     return cfg, cfg_train
 
+
 def _build_model(cfg):
     from LHM.models import model_dict
 
@@ -283,26 +276,6 @@ def _build_model(cfg):
     model = hf_model_cls.from_pretrained(cfg.model_name)
 
     return model
-
-def launch_pretrained():
-    from huggingface_hub import hf_hub_download, snapshot_download
-    hf_hub_download(repo_id="DyrusQZ/LHM_Runtime", repo_type='model', filename='assets.tar', local_dir="./")
-    os.system("tar -xf assets.tar && rm assets.tar")
-    hf_hub_download(repo_id="DyrusQZ/LHM_Runtime", repo_type='model', filename='LHM-0.5B.tar', local_dir="./")
-    os.system("tar -xf LHM-0.5B.tar && rm LHM-0.5B.tar")
-    hf_hub_download(repo_id="DyrusQZ/LHM_Runtime", repo_type='model', filename='LHM_prior_model.tar', local_dir="./")
-    os.system("tar -xf LHM_prior_model.tar && rm LHM_prior_model.tar")
-
-def launch_env_not_compile_with_cuda():
-    os.system("pip install chumpy")
-    os.system("pip uninstall -y basicsr")
-    os.system("pip install git+https://github.com/hitsz-zuoqi/BasicSR/")
-    os.system("pip install numpy==1.23.0")
-    # os.system("pip install git+https://github.com/hitsz-zuoqi/sam2/")
-    # os.system("pip install git+https://github.com/ashawkey/diff-gaussian-rasterization/")
-    # os.system("pip install git+https://github.com/camenduru/simple-knn/")
-    # os.system("pip install --no-index --no-cache-dir pytorch3d -f https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu121_pyt240/download.html")
-
 
 def animation_infer(renderer, gs_model_list, query_points, smplx_params, render_c2ws, render_intrs, render_bg_colors):
     '''Inference code avoid repeat forward.
@@ -510,7 +483,7 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
             multiply=16,
             need_mask=motion_img_need_mask,
             vis_motion=vis_motion,
-            motion_size=300,
+            motion_size=3000,
         )
 
         camera_size = len(motion_seq["motion_seqs"])
@@ -540,13 +513,18 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
 
         # rendering !!!!
         start_time = time.time()
-        batch_dict = dict()
-        batch_size = 80  # avoid memeory out!
+
+        batch_list = [] 
+
+        batch_size = 40  # avoid memeory out!
 
         for batch_i in range(0, camera_size, batch_size):
             with torch.no_grad():
                 # TODO check device and dtype
                 # dict_keys(['comp_rgb', 'comp_rgb_bg', 'comp_mask', 'comp_depth', '3dgs'])
+
+                print(f"batch: {batch_i}, total: {camera_size //batch_size +1} ")
+
                 keys = [
                     "root_pose",
                     "body_pose",
@@ -561,6 +539,8 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
                     "img_size_wh",
                     "expr",
                 ]
+
+
                 batch_smplx_params = dict()
                 batch_smplx_params["betas"] = shape_param.to(device)
                 batch_smplx_params['transform_mat_neutral_pose'] = transform_mat_neutral_pose
@@ -569,6 +549,7 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
                         :, batch_i : batch_i + batch_size
                     ].to(device)
 
+                # def animation_infer(self, gs_model_list, query_points, smplx_params, render_c2ws, render_intrs, render_bg_colors, render_h, render_w):
                 res = lhm.animation_infer(gs_model_list, query_points, batch_smplx_params,
                     render_c2ws=motion_seq["render_c2ws"][
                         :, batch_i : batch_i + batch_size
@@ -579,25 +560,21 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
                     render_bg_colors=motion_seq["render_bg_colors"][
                         :, batch_i : batch_i + batch_size
                     ].to(device),
-                )
+                    )
 
-            for accumulate_key in ["comp_rgb", "comp_mask"]:
-                if accumulate_key not in batch_dict:
-                    batch_dict[accumulate_key] = []
-                batch_dict[accumulate_key].append(res[accumulate_key].detach().cpu())
+            comp_rgb = res["comp_rgb"] # [Nv, H, W, 3], 0-1
+            comp_mask = res["comp_mask"] # [Nv, H, W, 3], 0-1
+            comp_mask[comp_mask < 0.5] = 0.0
+
+            batch_rgb = comp_rgb * comp_mask + (1 - comp_mask) * 1
+            batch_rgb = (batch_rgb.clamp(0,1) * 255).to(torch.uint8).detach().cpu().numpy()
+            batch_list.append(batch_rgb)
+
             del res
             torch.cuda.empty_cache()
-
-        for accumulate_key in ["comp_rgb", "comp_mask"]:
-            batch_dict[accumulate_key] = torch.cat(batch_dict[accumulate_key], dim=0)
-
+        
+        rgb = np.concatenate(batch_list, axis=0)
         print(f"time elapsed: {time.time() - start_time}")
-        rgb = batch_dict["comp_rgb"].detach().cpu().numpy()  # [Nv, H, W, 3], 0-1
-        mask = batch_dict["comp_mask"].detach().cpu().numpy()  # [Nv, H, W, 3], 0-1
-        mask[mask < 0.5] = 0.0
-
-        rgb = rgb * mask + (1 - mask) * 1
-        rgb = np.clip(rgb * 255, 0, 255).astype(np.uint8)
 
         if vis_motion:
             # print(rgb.shape, motion_seq["vis_motion_render"].shape)
@@ -664,7 +641,8 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
             )
 
         gr.HTML(
-            """<p><h4 style="color: red;"> Notes: Please input full-body image in case of detection errors. Currently, it only supports motion video input with a maximum of 300 frames. </h4></p>"""
+            """<p><h4 style="color: red;"> Notes: Please input human image. Currently, it only supports motion video input with a maximum of 3000 frames. </h4></p>"""
+            """<p><h4 style="color: red;"> For LHM-500M, we require at least 18 GB of GPU memory; for LHM-1B, we require at least 22 GB of memory.</h4></p>"""
         )
 
         # DISPLAY
@@ -674,7 +652,7 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
                 with gr.Tabs(elem_id="openlrm_input_image"):
                     with gr.TabItem('Input Image'):
                         with gr.Row():
-                            input_image = gr.Image(label="Input Image", value="./train_data/example_imgs/-00000000_joker_2.jpg",image_mode="RGBA", height=480, width=270, sources="upload", type="numpy", elem_id="content_image")
+                            input_image = gr.Image(label="Input Image", value="./train_data/example_imgs/00000000_joker_2.jpg",image_mode="RGBA", height=480, width=270, sources="upload", type="numpy", elem_id="content_image")
                 # EXAMPLES
                 examples = os.listdir('./train_data/example_imgs/')
                 with gr.Row():
@@ -746,16 +724,33 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
         demo.queue()
         demo.launch(server_name="0.0.0.0")
 
+def get_parse():
+    import argparse
+    parser = argparse.ArgumentParser(description='LHM-gradio: Large Animatable Human Model')
+    parser.add_argument('--model_name', default='LHM-1B-HF', type=str, choices=['LHM-500M', 'LHM-1B', 'LHM-500M-HF', 'LHM-1B-HF'], help='Model name')
+    args = parser.parse_args()
+    return args
 
 def launch_gradio_app():
 
+    args = get_parse()
+
+    is_22gpu = check_single_gpu_memory(22)
+
+    model_name = args.model_name
+    if not is_22gpu:
+        print("as your model does not large than 22GB, we will use LHM-500M instead.")
+        model_name = 'LHM-500M-HF' if 'HF' in model_name else "LHM-500M"
+
+
     os.environ.update({
         "APP_ENABLED": "1",
-        "APP_MODEL_NAME": "LHM-1B",
-        "APP_INFER": "./configs/inference/human-lrm-1B.yaml",
+        "APP_MODEL_NAME": model_name,  # choice from MODEL_CARD
         "APP_TYPE": "infer.human_lrm",
         "NUMBA_THREADING_LAYER": 'omp',
     })
+
+    prior_check()
 
     facedetector = VGGHeadDetector(
         "./pretrained_models/gagatracker/vgghead/vgg_heads_l.trcd",
@@ -779,15 +774,9 @@ def launch_gradio_app():
     lhm = _build_model(cfg)
     lhm.to('cuda')
 
-
-
     demo_lhm(pose_estimator, facedetector, parsingnet, lhm, cfg)
 
     # cfg, cfg_train = parse_configs()
     # demo_lhm(None, None, None, None, cfg)
-
-
-
 if __name__ == '__main__':
-    # launch_env_not_compile_with_cuda()
     launch_gradio_app()

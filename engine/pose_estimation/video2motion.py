@@ -8,6 +8,7 @@ import copy
 import json
 import os
 import sys
+from math import sqrt
 
 current_dir_path = os.path.dirname(__file__)
 sys.path.append(current_dir_path + "/../pose_estimation")
@@ -41,12 +42,20 @@ np.random.seed(seed=0)
 random.seed(0)
 
 
-def load_video(video_path, pad_ratio):
+def load_video(video_path, pad_ratio, max_resolution):
     cap = cv2.VideoCapture(video_path)
     assert cap.isOpened(), f"fail to load video file {video_path}"
     fps = cap.get(cv2.CAP_PROP_FPS)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    downsample_factor = -1
+    if (height * width) > max_resolution:
+        downsample_factor = sqrt(max_resolution / (height * width))
+        height = int(height * downsample_factor)
+        width = int(width * downsample_factor)
 
     frames = []
+    offset_w, offset_h = 0, 0
     while cap.isOpened():
         flag, frame = cap.read()
         if not flag:
@@ -54,11 +63,17 @@ def load_video(video_path, pad_ratio):
 
         # since the tracker and detector receive BGR images as inputs
         # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        if downsample_factor > 0:
+            frame = cv2.resize(
+                frame,
+                (width, height),
+                interpolation=cv2.INTER_AREA,
+            )
         if pad_ratio > 0:
             frame, offset_w, offset_h = img_center_padding(frame, pad_ratio)
         frames.append(frame)
-    height, weight, _ = frames[0].shape
-    return frames, height, weight, fps, offset_w, offset_h
+    height, width, _ = frames[0].shape
+    return frames, height, width, fps, offset_w, offset_h
 
 
 def images_crop(images, bboxes, target_size, device=torch.device("cuda")):
@@ -285,6 +300,7 @@ class Video2MotionPipeline:
         pad_ratio=0.2,
         fov=60,
     ):
+        self.MAX_RESOLUTION = 1289 * 720
         self.device = device
         self.visualize = True
         self.kp_mode = kp_mode
@@ -477,10 +493,10 @@ class Video2MotionPipeline:
             with open(os.path.join(out_path, f"{(i+1):05}.json"), "w") as fp:
                 json.dump(smplx_param, fp)
 
-    def __call__(self, video_path, output_path):
+    def __call__(self, video_path, output_path, is_file_only =False):
         start = time.time()
         all_frames, raw_H, raw_W, fps, offset_w, offset_h = load_video(
-            video_path, pad_ratio=self.pad_ratio
+            video_path, pad_ratio=self.pad_ratio, max_resolution=self.MAX_RESOLUTION
         )
         self.fps = fps
         video_length = len(all_frames)
@@ -500,10 +516,15 @@ class Video2MotionPipeline:
             frame_ids, frames, keypoints, bboxes, raw_K, video_length
         )
 
-        output_folder = os.path.join(
-            output_path, video_path.split("/")[-1].split(".")[0]
-        )
+        if is_file_only:
+            output_folder = output_path
+        else:
+            output_folder = os.path.join(
+                output_path, video_path.split("/")[-1].split(".")[0]
+            )
         os.makedirs(output_folder, exist_ok=True)
+
+        self.visualize = False
 
         if self.visualize:
             self.save_video(
@@ -517,6 +538,9 @@ class Video2MotionPipeline:
         )
         duration = time.time() - start
         print(f"{video_path} processing completed, duration: {duration:.2f}s")
+
+
+        return smplx_output_folder 
 
 
 def get_parse():

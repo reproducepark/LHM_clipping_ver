@@ -6,7 +6,8 @@
 [![项目主页](https://img.shields.io/badge/🌐-项目主页-blueviolet)](https://aigc3d.github.io/projects/LHM/)
 [![arXiv论文](https://img.shields.io/badge/📜-arXiv:2503-10625)](https://arxiv.org/pdf/2503.10625)
 [![HuggingFace](https://img.shields.io/badge/🤗-HuggingFace_Space-blue)](https://huggingface.co/spaces/DyrusQZ/LHM)
-[![ModelScope](https://img.shields.io/badge/%20ModelScope%20-Space-blue)](https://modelscope.cn/studios/Damo_XR_Lab/Motionshop2) 
+[![ModelScope](https://img.shields.io/badge/%20ModelScope%20-Space-blue)](https://www.modelscope.cn/studios/Damo_XR_Lab/LHM) 
+[![MotionShop2](https://img.shields.io/badge/%20MotionShop2%20-Space-blue)](https://modelscope.cn/studios/Damo_XR_Lab/Motionshop2) 
 [![Apache协议](https://img.shields.io/badge/📃-Apache--2.0-929292)](https://www.apache.org/licenses/LICENSE-2.0)
 
 <p align="center">
@@ -14,6 +15,12 @@
 </p>
 
 ## 📢 最新动态
+<<<<<<< HEAD
+**[2025年3月29日]** LHM-500M-HF & LHM-1B-HF 模型开源, 更鲁棒更快，现在支持半身图片输入拉！<br>
+=======
+**[2025年4月2日]** LHM-500M-HF & LHM-1B-HF 模型开源, 更鲁棒更快，现在支持半身图片输入拉！<br>
+**[2025年4月2日]** 我们正式发布了官方的 ComfyUI 节点和自定义视频动画工作流程！🔥🔥🔥 欢迎尝试使用 [ComfyUI](https://github.com/aigc3d/LHM/tree/feat/comfyui) 分支！<br>
+>>>>>>> 55efd11 (LHM-HF release)
 **[2025年3月26日]** ModelScope 开源了，快来使用我们的线上资源吧 🔥🔥🔥!<br>
 **[2025年3月24日]** SAM2难装 😭😭😭? 👉 那就用rembg吧!<br>
 **[2025年3月20日]** 发布视频动作处理脚本<br>
@@ -37,6 +44,22 @@
 ## 🚀 快速开始
 
 我们提供了一个 [B站视频](https://www.bilibili.com/video/BV18So4YCESk/) 教大家如何一步一步的安装LHM.
+
+
+### 从Docker中构建环境
+请先确认你安装了nvidia-docker
+```
+# CUDA 121
+# step0. download docker images
+wget -P lhm_cuda_dockers ./ https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM_Docker/lhm_cuda121.tar 
+
+# step1. build from docker file
+sudo docker load -i  ./lhm_cuda_dockers/lhm_cuda121.tar 
+
+# step2. run docker_file and open the communication port 7860
+sudo docker run -p 7860:7860 -v PATH/FOLDER:DOCKER_WORKSPACES -it lhm:cuda_121 /bin/bash
+```
+
 ### 环境配置
 克隆仓库
 ```bash
@@ -62,26 +85,44 @@ pip install rembg
 
 <span style="color:red">如果你没下载模型，模型将会自动下载</span>
 
-模型	训练数据	BH-T层数	下载链接	推理时间
-LHM-0.5B	5K合成数据	5	OSS	2.01 s
-LHM-0.5B	300K视频+5K合成数据	5	OSS	2.01 s
-LHM-0.7B	300K视频+5K合成数据	10	OSS	4.13 s
-LHM-1.0B	300K视频+5K合成数据	15	OSS	6.57 s
 
-| 模型 | 训练数据 | Transformer 层数 | 下载链接 | 推理时间 |
-| :--- | :--- | :--- | :--- | :--- |
-| LHM-0.5B | 5K合成数据| 5 | OSS | 2.01 s |
-| LHM-0.5B | 300K视频+5K合成数据 | 5 | [OSS](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-0.5B.tar) | 2.01 s |
-| LHM-0.7B | 300K视频+5K合成数据 | 10 | OSS | 4.13 s  |
-| LHM-1.0B | 300K视频+5K合成数据 | 15 | [OSS](https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-1B.tar) | 6.57 s |
+| 模型 | 训练数据 | Transformer 层数| ModelScope| HuggingFace| 推理时间 | 要求输入|
+| :--- | :--- | :--- | :--- | :--- | :--- |:--- |
+| LHM-500M | 300K 视频数据 + 5K 3D数据  | 5 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M) |[huggingface](https://huggingface.co/3DAIGC/LHM-500M)| 2.01 s | 全身|
+| LHM-500M-HF | 300K 视频数据 + 5K 3D数据 | 5 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M-HF) |[huggingface](https://huggingface.co/3DAIGC/LHM-500M-HF)| 2.01 s | 全身半身|
+| LHM-1.0B | 300K 视频数据 + 5K 3D数据 | 15 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-1B) |[huggingface](https://huggingface.co/3DAIGC/LHM-1B)| 6.57 s | 全身|
+| LHM-1B-HF | 300K 视频数据 + 5K 3D数据  | 15 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-1B-HF) |[huggingface](https://huggingface.co/3DAIGC/LHM-1B-HF)| 6.57 s |全身半身|
 
-```bash
-# 下载预训练模型权重
-wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-0.5B.tar
-tar -xvf LHM-0.5B.tar 
-wget https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM-1B.tar
-tar -xvf LHM-1B.tar
+更多模型信息见： [model_card.md](modelcard.md).
+
+
+#### 从HuggingFace下载
+```python
+from huggingface_hub import snapshot_download 
+# 500M-HF Model
+model_dir = snapshot_download(repo_id='3DAIGC/LHM-500M-HF', cache_dir='./pretrained_models/huggingface')
+# 500M Model
+model_dir = snapshot_download(repo_id='3DAIGC/LHM-500M', cache_dir='./pretrained_models/huggingface')
+# 1B Model
+model_dir = snapshot_download(repo_id='3DAIGC/LHM-1B', cache_dir='./pretrained_models/huggingface')
+# 1B-HF Model
+model_dir = snapshot_download(repo_id='3DAIGC/LHM-1B-HF', cache_dir='./pretrained_models/huggingface')
 ```
+
+#### 从ModelScope下载
+```python
+
+from modelscope import snapshot_download
+# 500M-HF Model
+model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-500M-HF', cache_dir='./pretrained_models')
+# 500M Model
+model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-500M', cache_dir='./pretrained_models')
+# 1B Model
+model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-1B', cache_dir='./pretrained_models')
+# 1B-HF Model
+model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-1B-HF', cache_dir='./pretrained_models')
+```
+
 
 ### 下载先验模型权重
 ```bash
@@ -149,20 +190,32 @@ tar -xvf ./motion_video.tar
 
 
 ### 💻 本地部署 
+我们现在支持用户自定义动作输入，但是由于动作估计器内存占比，我们LHM-500M 在用户自定义动作输入gradio中需要22GB 的内存, 你也可以提前处理好，然后用我们之前的接口
 ```bash
+# Support user motion sequence input. As the pose estimator requires some GPU memory, this Gradio application requires at least 24 GB of GPU memory to run LHM-500M.
+python ./app_motion.py  
+python ./app_motion.py  --model_name LHM-1B-HF
+
+# preprocessing video sequence
 python ./app.py
+python ./app.py --model_name LHM-1B
 ```
 
 ### 🏃 推理流程
+我们现在支持半身图输入拉!
+<img src="./assets/half_input.gif" width="75%" height="auto"/>
+
 ```bash
-# MODEL_NAME={LHM-500M, LHM-1B}
-# bash ./inference.sh ./configs/inference/human-lrm-500M.yaml LHM-500M ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
-# bash ./inference.sh ./configs/inference/human-lrm-1B.yaml LHM-1B ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
+# MODEL_NAME={LHM-500M, LHM-500M-HF, LHM-1B, LHM-1B-HF}
+# bash ./inference.sh  LHM-500M ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
+# bash ./inference.sh  LHM-1B ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
+# bash ./inference.sh  LHM-500M-HF ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
+# bash ./inference.sh  LHM-1B-HF ./train_data/example_imgs/ ./train_data/motion_video/mimo1/smplx_params
 
 # export animation video
-bash inference.sh ${CONFIG} ${MODEL_NAME} ${IMAGE_PATH_OR_FOLDER}  ${MOTION_SEQ}
+bash inference.sh ${MODEL_NAME} ${IMAGE_PATH_OR_FOLDER}  ${MOTION_SEQ}
 # export mesh 
-bash ./inference_mesh.sh ${CONFIG} ${MODEL_NAME} 
+bash ./inference_mesh.sh ${MODEL_NAME} 
 ```
 ### 处理视频动作数据
 
@@ -175,6 +228,7 @@ bash ./inference_mesh.sh ${CONFIG} ${MODEL_NAME}
 - 安装额外的依赖
   ```bash
   cd ./engine/pose_estimation
+  pip install mmcv==1.3.9
   pip install -v -e third-party/ViTPose
   pip install ultralytics
   ```
@@ -189,9 +243,9 @@ bash ./inference_mesh.sh ${CONFIG} ${MODEL_NAME}
 
 - 使用提取的动作数据驱动数字人
   ```bash
-  # bash ./inference.sh ./configs/inference/human-lrm-500M.yaml LHM-500M ./train_data/example_imgs/ ./train_data/custom_motion/demo/smplx_params
+  # bash ./inference.sh LHM-500M-HF ./train_data/example_imgs/ ./train_data/custom_motion/demo/smplx_params
 
-  bash inference.sh ${CONFIG} ${MODEL_NAME} ${IMAGE_PATH_OR_FOLDER}  ${OUTPUT_PATH}/${VIDEO_NAME}/smplx_params
+  bash inference.sh ${MODEL_NAME} ${IMAGE_PATH_OR_FOLDER}  ${OUTPUT_PATH}/${VIDEO_NAME}/smplx_params
   ```
 
 ## 计算指标
@@ -217,6 +271,12 @@ python ./tools/metrics/compute_ssim_lpips.py -f1 ${gt_folder} -f2 ${results_fold
 
 感谢这些杰出工作对3D生成和数字人领域的重要贡献。
 我们要特别感谢[站长推荐推荐](https://space.bilibili.com/175365958?spm_id_from=333.337.0.0), 他无私地做了一条B站视频来交大家如何安装LHM.
+
+
+## 更多工作 
+欢迎使用我们团队更多有趣的工作:
+- [LAM](https://github.com/aigc3d/LAM)
+- [AniGS](https://github.com/aigc3d/AniGS)
 
 ## 点赞曲线 
 

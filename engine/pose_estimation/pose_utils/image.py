@@ -2,15 +2,30 @@
 # Copyright (c) 2024-present NAVER Corp.
 # CC BY-NC-SA 4.0 license
 
-import torch
-import numpy as np
-from PIL import Image, ImageOps
-import torch.nn.functional as F
-import cv2
 import time
+
+import cv2
+import numpy as np
+import torch
+import torch.nn.functional as F
+from PIL import Image, ImageOps
 
 IMG_NORM_MEAN = [0.485, 0.456, 0.406]
 IMG_NORM_STD = [0.229, 0.224, 0.225]
+def downsample_image_cv2(image, scale_percent):
+    """
+    Downsample an image using cv2.resize.
+    Args:
+        image (np.array): Input image as a NumPy array.
+        scale_percent (float): Scale percentage for downsampling. A value less than 100 will downsample the image.
+    Returns:
+        np.array: Downsampled image.
+    """
+    width = int(image.shape[1] * scale_percent)
+    height = int(image.shape[0] * scale_percent)
+    dim = (width, height)
+    resized = cv2.resize(image, dim, interpolation=cv2.INTER_AREA)
+    return resized
 
 
 def img_center_padding(img_np, pad_ratio):
