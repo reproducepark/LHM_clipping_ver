@@ -278,6 +278,11 @@ def parse_configs():
     cfg = OmegaConf.create()
     cli_cfg = OmegaConf.from_cli(unknown)
 
+    if "export_mesh" not in cli_cfg: 
+        cli_cfg.export_mesh = None
+    if "export_video" not in cli_cfg: 
+        cli_cfg.export_video= None
+
     query_model = AutoModelQuery()
 
     # parse from ENV
@@ -593,7 +598,7 @@ class HumanLRMInferrer(Inferrer):
 
         output_gs_path = '_'.join(os.path.basename(image_path).split('.')[:-1])+'.ply'
 
-        print(f"save mesh to {output_gs_path}")
+        print(f"save mesh to {os.path.join(dump_mesh_dir, output_gs_path)}")
         output_gs.save_ply(os.path.join(dump_mesh_dir, output_gs_path))
 
 

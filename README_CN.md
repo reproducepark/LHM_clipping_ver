@@ -44,6 +44,7 @@
 ## 🚀 快速开始
 
 我们提供了一个 [B站视频](https://www.bilibili.com/video/BV18So4YCESk/) 教大家如何一步一步的安装LHM.
+我们提供了一个 [B站视频](https://www.bilibili.com/video/BV1J9Z1Y2EiJ/) 教大家如何一步一步的安装LHM-ComfyUI.
 
 
 ### 从Docker中构建环境

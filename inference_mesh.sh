@@ -18,7 +18,7 @@ EXPORT_MESH=True
 
 python -m LHM.launch infer.human_lrm model_name=$MODEL_NAME \
         image_input=$IMAGE_INPUT \
-        export_video=$EXPORT_VIDEO export_mesh=$EXPORT_MESH \
+        export_mesh=$EXPORT_MESH \
         motion_seqs_dir=$MOTION_SEQS_DIR motion_img_dir=$MOTION_IMG_DIR  \
         vis_motion=$VIS_MOTION motion_img_need_mask=$MOTION_IMG_NEED_MASK \
         render_fps=$RENDER_FPS motion_video_read_fps=$MOTION_VIDEO_READ_FPS

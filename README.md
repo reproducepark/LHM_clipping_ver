@@ -42,6 +42,8 @@
 
 We provide a [video](https://www.bilibili.com/video/BV18So4YCESk/) that teaches us how to install LHM step by step on bilibili, submitted by 站长推荐推荐.
 
+We provide a [video](https://www.bilibili.com/video/BV1J9Z1Y2EiJ/) that teaches us how to install LHM-ComfyUI step by step on bilibili, submitted by 站长推荐推荐.
+
 
 ### Build from Docker
 Please sure you had install nvidia-docker in our system.
@@ -49,7 +51,7 @@ Please sure you had install nvidia-docker in our system.
 # Linux System only
 # CUDA 121
 # step0. download docker images
-wget -P lhm_cuda_dockers ./ https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM_Docker/lhm_cuda121.tar 
+wget -P ./lhm_cuda_dockers https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM_Docker/lhm_cuda121.tar 
 
 # step1. build from docker file
 sudo docker load -i  ./lhm_cuda_dockers/lhm_cuda121.tar 
@@ -97,7 +99,7 @@ Or you can install dependencies step by step, following [INSTALL.md](INSTALL.md)
 | LHM-500M | 300K Videos + 5K Synthetic Data | 5 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M) |[huggingface](https://huggingface.co/3DAIGC/LHM-500M)| 2.01 s | full body|
 | LHM-500M-HF | 300K Videos + 5K Synthetic Data | 5 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M-HF) |[huggingface](https://huggingface.co/3DAIGC/LHM-500M-HF)| 2.01 s | half & full body|
 | LHM-1.0B | 300K Videos + 5K Synthetic Data | 15 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-1B) |[huggingface](https://huggingface.co/3DAIGC/LHM-1B)| 6.57 s | full body|
-| LHM-1B-HF | 300K Videos + 5K Synthetic Data | 5 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-1B-HF) |[huggingface](https://huggingface.co/3DAIGC/LHM-1B-HF)| 6.57 s | half & full body|
+| LHM-1B-HF | 300K Videos + 5K Synthetic Data | 15 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-1B-HF) |[huggingface](https://huggingface.co/3DAIGC/LHM-1B-HF)| 6.57 s | half & full body|
 
 
 Model cards with additional details can be found in [model_card.md](modelcard.md).
