@@ -15,12 +15,8 @@
 </p>
 
 ## 📢 最新动态
-<<<<<<< HEAD
-**[2025年3月29日]** LHM-500M-HF & LHM-1B-HF 模型开源, 更鲁棒更快，现在支持半身图片输入拉！<br>
-=======
-**[2025年4月2日]** LHM-500M-HF & LHM-1B-HF 模型开源, 更鲁棒更快，现在支持半身图片输入拉！<br>
+**[2025年4月3日]** LHM-500M-HF & LHM-1B-HF 模型开源, 更鲁棒更快，现在支持半身图片输入拉！<br>
 **[2025年4月2日]** 我们正式发布了官方的 ComfyUI 节点和自定义视频动画工作流程！🔥🔥🔥 欢迎尝试使用 [ComfyUI](https://github.com/aigc3d/LHM/tree/feat/comfyui) 分支！<br>
->>>>>>> 55efd11 (LHM-HF release)
 **[2025年3月26日]** ModelScope 开源了，快来使用我们的线上资源吧 🔥🔥🔥!<br>
 **[2025年3月24日]** SAM2难装 😭😭😭? 👉 那就用rembg吧!<br>
 **[2025年3月20日]** 发布视频动作处理脚本<br>
@@ -52,7 +48,7 @@
 ```
 # CUDA 121
 # step0. download docker images
-wget -P lhm_cuda_dockers ./ https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM_Docker/lhm_cuda121.tar 
+wget -P ./lhm_cuda_dockers https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/for_lingteng/LHM/LHM_Docker/lhm_cuda121.tar 
 
 # step1. build from docker file
 sudo docker load -i  ./lhm_cuda_dockers/lhm_cuda121.tar 
