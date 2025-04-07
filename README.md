@@ -17,10 +17,11 @@
 
 如果您熟悉中文，可以[阅读中文版本的README](./README_CN.md)
 ## 📢 Latest Updates
+**[April 9, 2025]** We release the video processing pipeline to create your training data [LHM_Track](https://github.com/aigc3d/LHM_Track)!<br>
+**[April 7, 2025]** We release another project [LAM](https://github.com/aigc3d/LAM) ! "Build 3D Interactive Chatting Avatar with One Image in Seconds!"<br>
 **[April 3, 2025]** We release LHM-500M-HF & LHM-1B-HF, which supports half-body input, making it more stable and efficient.<br>
 **[April 2, 2025]** We release official ComfyUI Nodes and workflow for custom video animation! 🔥🔥🔥 Try the [ComfyUI](https://github.com/aigc3d/LHM/tree/feat/comfyui) branch.<br>
 **[March 25, 2025]** The online demo of ModelScope Space has been released: 500M model Only.<br>
-**[March 24, 2025]** Is SAM2 difficult to install😭😭😭? 👉 It is compatible with rembg!<br>
 **[March 20, 2025]** Release video motion processing pipeline<br>
 **[March 19, 2025]** Local Gradio App.py optimization:  Faster and More Stable 🔥🔥🔥 <br>
 **[March 15, 2025]** Inference Time Optimization:  30% Faster <br>
@@ -40,9 +41,14 @@
 
 ## 🚀 Getting Started
 
+
+We provide a [video](https://youtu.be/Q56Jllz33tk) that teaches us how to install LHM and LHM-ComfyUI step by step on YouTube, submitted by [softicelee2](https://github.com/softicelee2).
+
 We provide a [video](https://www.bilibili.com/video/BV18So4YCESk/) that teaches us how to install LHM step by step on bilibili, submitted by 站长推荐推荐.
 
 We provide a [video](https://www.bilibili.com/video/BV1J9Z1Y2EiJ/) that teaches us how to install LHM-ComfyUI step by step on bilibili, submitted by 站长推荐推荐.
+
+
 
 
 ### Build from Docker
@@ -285,12 +291,12 @@ This work is built on many amazing research works and open-source projects:
 
 Thanks for their excellent works and great contribution to 3D generation and 3D digital human area.
 
-We would like to express our sincere gratitude to [站长推荐推荐](https://space.bilibili.com/175365958?spm_id_from=333.337.0.0)  for the installation tutorial video on bilibili.
+We would like to express our sincere gratitude to [站长推荐推荐](https://space.bilibili.com/175365958?spm_id_from=333.337.0.0) and [softicelee2](https://github.com/softicelee2) for the installation tutorial video on bilibili.
 
 ## More Works
 Welcome to follow our team other interesting works:
-- [LAM](https://github.com/aigc3d/LAM)
 - [AniGS](https://github.com/aigc3d/AniGS)
+- [LAM](https://github.com/aigc3d/LAM)
 
 ## ✨ Star History
 
