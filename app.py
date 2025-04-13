@@ -51,12 +51,18 @@ from LHM.runners.infer.utils import (
     prepare_motion_seqs,
     resize_image_keepaspect_np,
 )
-from LHM.utils.download_utils import download_extract_tar_from_url
+from LHM.utils.download_utils import download_extract_tar_from_url, download_from_url
 from LHM.utils.face_detector import VGGHeadDetector
 from LHM.utils.ffmpeg_utils import images_to_video
 from LHM.utils.gpu_utils import check_single_gpu_memory
 from LHM.utils.hf_hub import wrap_model_hub
 from LHM.utils.model_card import MODEL_CARD, MODEL_CONFIG
+
+
+def download_geo_files():
+    if not os.path.exists('./pretrained_models/dense_sample_points/1_20000.ply'):
+        download_from_url('https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LHM/1_20000.ply','./pretrained_models/dense_sample_points/')
+
 
 
 def query_model_config(model_name):
@@ -727,20 +733,25 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, cfg):
 def get_parse():
     import argparse
     parser = argparse.ArgumentParser(description='LHM-gradio: Large Animatable Human Model')
-    parser.add_argument('--model_name', default='LHM-1B-HF', type=str, choices=['LHM-500M', 'LHM-1B', 'LHM-500M-HF', 'LHM-1B-HF'], help='Model name')
+    parser.add_argument('--model_name', default='LHM-1B-HF', type=str, choices=['LHM-500M', 'LHM-1B', 'LHM-500M-HF', 'LHM-1B-HF', 'LHM-MINI'], help='Model name')
     args = parser.parse_args()
     return args
 
 def launch_gradio_app():
 
+    download_geo_files()
     args = get_parse()
 
+    is_18gpu = check_single_gpu_memory(18)
     is_22gpu = check_single_gpu_memory(22)
 
     model_name = args.model_name
-    if not is_22gpu:
+    if not is_22gpu and is_18gpu:
         print("as your model does not large than 22GB, we will use LHM-500M instead.")
         model_name = 'LHM-500M-HF' if 'HF' in model_name else "LHM-500M"
+    else:
+        print("as your model does not large than 18GB, we will use LHM-MINI instead.")
+        model_name = "LHM-MINI"
 
 
     os.environ.update({

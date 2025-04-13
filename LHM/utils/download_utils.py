@@ -68,5 +68,9 @@ def download_extract_tar_from_url(url, save_path='./'):
         os.remove(save_file)
 
 
+def download_from_url(url, save_path):
+    save_file = download_file(url, save_path)
+    return save_file
+
 
 

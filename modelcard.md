@@ -11,6 +11,7 @@
 
     | Model | Training Data | Training Strategy |
     | :---: | :---: | :---: |
+    | [LHM-MINI](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M) | 2K2K & RP & THuman + 300K Videos | Random Crop Body Size |
     | [LHM-500M](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M) | 2K2K & RP & THuman + 300K Videos | Full Body |
     | [LHM-500M-HF](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M-HF) | 2K2K & RP & THuman + 300K Videos | Random Crop Body Size |
     | [LHM-1B](https://modelscope.cn/models/Damo_XR_Lab/LHM-1B) | 2K2K & RP & THuman + 300K Videos | Full Body |
@@ -20,6 +21,7 @@
 
     | Type  | Layers | Feat. Dim | Attn. Heads | The number of GS Points. | Input Res. | Image Encoder     | Encoder Dim. | Service Requirement |
     | :---: | :----: | :-------: | :---------: | :-----------: | :--------: | :---------------: | :----------: | :---: |
+    | LHM-MINI |  2 |    1024    |    16 |   20K |    512     | dinov2_vits14_reg & Sapiens-1B | 1024 | 16G GPU, 24G VRAM |
     | LHM-500M |  5 |    1024    |    16 |      40K |    512     | dinov2_vits14_reg & Sapiens-1B | 1024 | 18G GPU, 24G VRAM |
     | LHM-500M-HF  | 5 |    1024    |    16      |      40K       |    512 | dinov2_vitb14_reg & Sapiens-1B |      1024 | 18G GPU, 24G VRAM |
     | LHM-1B |   15 |   1024    |     16      |      40K |    1024 | dinov2_vitb14_reg & Sapiens-1B | 1024 | 24G GPU, 24G VRAM |

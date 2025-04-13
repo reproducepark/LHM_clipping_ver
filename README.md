@@ -17,6 +17,7 @@
 
 如果您熟悉中文，可以[阅读中文版本的README](./README_CN.md)
 ## 📢 Latest Updates
+**[April 13, 2025]** We have released LHM-MINI, which allows you to run LHM on 16 GB GPUs. 🔥🔥🔥
 **[April 10, 2025]** We release the motion extraction node and animation infer node of LHM on ComfyUI. With a extracted offline motion, you can generate a 10s animation clip in 20s!!! Update your [ComfyUI](https://github.com/aigc3d/LHM/tree/feat/comfyui) branch right now.🔥🔥🔥 
 <br>
 **[April 9, 2025]** we build a detailed tutorial to guide users to install [LHM-ComfyUI](https://github.com/aigc3d/LHM/blob/feat/comfyui/Windows11_install.md) on Windows step by step!<br>
@@ -105,6 +106,7 @@ Or you can install dependencies step by step, following [INSTALL.md](INSTALL.md)
 
 | Model | Training Data | BH-T Layers | ModelScope| HuggingFace |Inference Time|input requirement|
 | :--- | :--- | :--- | :--- | :--- | :--- |:--- |
+| LHM-MINI | 300K Videos + 5K Synthetic Data | 2 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-MINI) |[huggingface](https://huggingface.co/3DAIGC/LHM-MINI)| 1.41 s | half & full body|
 | LHM-500M | 300K Videos + 5K Synthetic Data | 5 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M) |[huggingface](https://huggingface.co/3DAIGC/LHM-500M)| 2.01 s | full body|
 | LHM-500M-HF | 300K Videos + 5K Synthetic Data | 5 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-500M-HF) |[huggingface](https://huggingface.co/3DAIGC/LHM-500M-HF)| 2.01 s | half & full body|
 | LHM-1.0B | 300K Videos + 5K Synthetic Data | 15 | [ModelScope](https://modelscope.cn/models/Damo_XR_Lab/LHM-1B) |[huggingface](https://huggingface.co/3DAIGC/LHM-1B)| 6.57 s | full body|
@@ -117,12 +119,9 @@ Model cards with additional details can be found in [model_card.md](modelcard.md
 #### Download from HuggingFace
 ```python
 from huggingface_hub import snapshot_download 
+model_dir = snapshot_download(repo_id='3DAIGC/LHM-MINI', cache_dir='./pretrained_models/huggingface')
 # 500M-HF Model
 model_dir = snapshot_download(repo_id='3DAIGC/LHM-500M-HF', cache_dir='./pretrained_models/huggingface')
-# 500M Model
-model_dir = snapshot_download(repo_id='3DAIGC/LHM-500M', cache_dir='./pretrained_models/huggingface')
-# 1B Model
-model_dir = snapshot_download(repo_id='3DAIGC/LHM-1B', cache_dir='./pretrained_models/huggingface')
 # 1B-HF Model
 model_dir = snapshot_download(repo_id='3DAIGC/LHM-1B-HF', cache_dir='./pretrained_models/huggingface')
 ```
@@ -131,12 +130,9 @@ model_dir = snapshot_download(repo_id='3DAIGC/LHM-1B-HF', cache_dir='./pretraine
 ```python
 
 from modelscope import snapshot_download
+model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-MINI', cache_dir='./pretrained_models')
 # 500M-HF Model
 model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-500M-HF', cache_dir='./pretrained_models')
-# 500M Model
-model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-500M', cache_dir='./pretrained_models')
-# 1B Model
-model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-1B', cache_dir='./pretrained_models')
 # 1B-HF Model
 model_dir = snapshot_download(model_id='Damo_XR_Lab/LHM-1B-HF', cache_dir='./pretrained_models')
 ```

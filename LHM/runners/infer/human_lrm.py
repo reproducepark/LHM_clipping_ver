@@ -42,7 +42,7 @@ from LHM.runners.infer.utils import (
     prepare_motion_seqs,
     resize_image_keepaspect_np,
 )
-from LHM.utils.download_utils import download_extract_tar_from_url
+from LHM.utils.download_utils import download_extract_tar_from_url, download_from_url
 from LHM.utils.face_detector import FaceDetector
 
 # from LHM.utils.video import images_to_video
@@ -51,6 +51,10 @@ from LHM.utils.hf_hub import wrap_model_hub
 from LHM.utils.logging import configure_logger
 from LHM.utils.model_card import MODEL_CARD, MODEL_CONFIG
 
+
+def download_geo_files():
+    if not os.path.exists('./pretrained_models/dense_sample_points/1_20000.ply'):
+        download_from_url('https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LHM/1_20000.ply','./pretrained_models/dense_sample_points/')
 
 def prior_check():
     if not os.path.exists('./pretrained_models'):
@@ -270,6 +274,9 @@ def infer_preprocess_image(
 
 
 def parse_configs():
+
+
+    download_geo_files()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--infer", type=str)
