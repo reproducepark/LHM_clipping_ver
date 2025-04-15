@@ -22,7 +22,6 @@
 <br>
 **[April 9, 2025]** we build a detailed tutorial to guide users to install [LHM-ComfyUI](https://github.com/aigc3d/LHM/blob/feat/comfyui/Windows11_install.md) on Windows step by step!<br>
 **[April 9, 2025]** We release the video processing pipeline to create your training data [LHM_Track](https://github.com/aigc3d/LHM_Track)!<br>
-**[April 7, 2025]** We release another project [LAM](https://github.com/aigc3d/LAM) ! "Build 3D Interactive Chatting Avatar with One Image in Seconds!"<br>
 **[April 3, 2025]** We release LHM-500M-HF & LHM-1B-HF, which supports half-body input, making it more stable and efficient.<br>
 **[April 2, 2025]** We release official ComfyUI Nodes and workflow for custom video animation! 🔥🔥🔥 Try the [ComfyUI](https://github.com/aigc3d/LHM/tree/feat/comfyui) branch.<br>
 **[March 25, 2025]** The online demo of ModelScope Space has been released: 500M model Only.<br>
