@@ -6,7 +6,6 @@
 # @Function      : auto download class (Modified logic)
 
 import os
-import pdb
 import subprocess
 import sys
 
@@ -247,7 +246,6 @@ class AutoModelQuery:
         else:
              print("Step 3: Skipping Hugging Face download (not in HuggingFace card).")
 
-        pdb.set_trace()
         # 4. Try downloading from ModelScope
         if is_in_ms:
             try:
@@ -264,7 +262,6 @@ class AutoModelQuery:
         else:
              print("Step 4: Skipping ModelScope download (not in ModelScope card).")
 
-        pdb.set_trace()
         # If model_path is still None after all attempts
         if model_path is None:
              error_msg = f"Failed to find or download model '{model_name}' from any source (local or remote)."
