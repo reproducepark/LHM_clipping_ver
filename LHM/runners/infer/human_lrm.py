@@ -20,6 +20,8 @@ from tqdm.auto import tqdm
 
 from engine.pose_estimation.pose_estimator import PoseEstimator
 from engine.SegmentAPI.base import Bbox
+
+# from LHM.utils.model_download_utils import AutoModelQuery
 from LHM.utils.model_download_utils import AutoModelQuery
 
 try:

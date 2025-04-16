@@ -13,6 +13,9 @@
 # limitations under the License.
 
 
+# memory save version
+
+
 import base64
 import os
 import tempfile
@@ -41,11 +44,27 @@ from engine.SegmentAPI.base import Bbox
 from LHM.utils.model_download_utils import AutoModelQuery
 from LHM.utils.model_query_utils import AutoModelSwitcher
 
+# Initialize remove function to None initially
+remove = None
 try:
     from engine.SegmentAPI.SAM import SAM2Seg
-except:
-    print("\033[31mNo SAM2 found! Try using rembg to remove the background. This may slightly degrade the quality of the results!\033[0m")
-    from rembg import remove
+    print("SAM2Seg found and imported.")
+except ImportError:
+    print("\033[31mSAM2Seg import failed. Attempting to import rembg...\033[0m")
+    try:
+        from rembg import remove
+        print("rembg imported successfully.")
+    except ImportError:
+        print("\033[31mError: Neither SAM2Seg nor rembg could be imported. Background removal will not work.\033[0m")
+except Exception as e:
+    print(f"\033[31mAn unexpected error occurred during import: {e}\033[0m")
+    # Attempt to import rembg as a fallback even on unexpected errors during SAM2 import
+    try:
+        from rembg import remove
+        print("rembg imported successfully as fallback.")
+    except ImportError:
+         print("\033[31mError: rembg could not be imported as fallback either.\033[0m")
+
 
 from engine.pose_estimation.video2motion import Video2MotionPipeline
 from LHM.runners.infer.utils import (
@@ -288,7 +307,7 @@ def _build_model(cfg):
 
     hf_model_cls = wrap_model_hub(model_dict["human_lrm_sapdino_bh_sd3_5"])
     model = hf_model_cls.from_pretrained(cfg.model_name)
-
+    model = model.half()
     return model
 
 def animation_infer(renderer, gs_model_list, query_points, smplx_params, render_c2ws, render_intrs, render_bg_colors):
@@ -370,7 +389,8 @@ def get_image_base64(path):
 
 
 @torch.no_grad()
-def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, motion_generation, cfg):
+# Removed pose_estimator, face_detector, parsing_net from function signature
+def demo_lhm(lhm, motion_generation, cfg): # Only lhm and cfg remain from original models
 
     motion_processing_dir = './train_data/users/motion_processing'
     if os.path.exists(motion_processing_dir):
@@ -396,7 +416,25 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, motion_generation,
             output_path =  os.path.join(motion_processing_dir, video_hash)
 
             if not os.path.exists(output_path):
-                smplx_params_dir= motion_generation(video_params, output_path, is_file_only=True)
+                # Load motion_generation only when needed
+                print("Loading Video2MotionPipeline...")
+                device = avaliable_device() # Ensure device is available in this scope
+                motion_generation_ondemand = Video2MotionPipeline(
+                    './pretrained_models/human_model_files',
+                    fitting_steps=[30, 50],
+                    device=device,
+                    kp_mode='vitpose',
+                    visualize=False,
+                    pad_ratio=0.2,
+                    fov=60,
+                )
+                print("Generating motion parameters...")
+                smplx_params_dir = motion_generation_ondemand(video_params, output_path, is_file_only=True)
+                # Unload motion_generation after use
+                print("Unloading Video2MotionPipeline...")
+                del motion_generation_ondemand
+                torch.cuda.empty_cache()
+                print("Video2MotionPipeline unloaded.")
             else:
                 smplx_params_dir = os.path.join(output_path, 'smplx_params')
 
@@ -437,17 +475,71 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, motion_generation,
         motion_img_need_mask = cfg.get("motion_img_need_mask", False)  # False
         vis_motion = cfg.get("vis_motion", False)  # False
 
-        with torch.no_grad():
-            if parsing_net is not None:
-                parsing_out = parsing_net(img_path=image_raw, bbox=None)
-                parsing_mask = (parsing_out.masks * 255).astype(np.uint8)
-            else:
-                img_np = cv2.imread(image_raw)
-                remove_np = remove(img_np)
-                parsing_mask = remove_np[...,3]
+        # --- On-demand SAM2/rembg loading and execution ---
+        parsing_mask = None
+        parsingnet_ondemand = None
+        try:
+            # Try to load SAM2 on demand
+            print("Attempting to load SAM2Seg...")
+            parsingnet_ondemand = SAM2Seg()
+            print("SAM2Seg loaded successfully.")
+            with torch.no_grad():
+                 parsing_out = parsingnet_ondemand(img_path=image_raw, bbox=None)
+                 parsing_mask = (parsing_out.masks * 255).astype(np.uint8)
+            print("Image parsed using SAM2.")
+        except NameError: # Catches if SAM2Seg is not defined (import failed)
+             print("SAM2Seg not available (NameError). Falling back to rembg.")
+        except Exception as e: # Catches other potential errors during SAM2 loading/running
+             print(f"Error during SAM2 processing: {e}. Falling back to rembg.")
 
-            shape_pose = pose_estimator(image_raw)
-        assert shape_pose.is_full_body, f"The input image is illegal, {shape_pose.msg}"
+        if parsing_mask is None: # If SAM2 failed or wasn't available
+             try:
+                 print("Using rembg for background removal...")
+                 img_np = cv2.imread(image_raw)
+                 remove_np = remove(img_np)
+                 parsing_mask = remove_np[...,3]
+                 print("Background removed using rembg.")
+             except Exception as e:
+                 print(f"Error during rembg processing: {e}. Cannot generate mask.")
+                 # Handle error appropriately, maybe raise or return an error message
+                 raise gr.Error("Failed to process image background removal.")
+
+        # Unload SAM2 if it was loaded
+        if parsingnet_ondemand is not None:
+             print("Unloading SAM2Seg...")
+             del parsingnet_ondemand
+             torch.cuda.empty_cache()
+             print("SAM2Seg unloaded.")
+        # --- End of On-demand SAM2/rembg ---
+
+        # Ensure parsing_mask is valid before proceeding
+        if parsing_mask is None:
+             raise gr.Error("Failed to generate parsing mask for the image.")
+
+        # --- On-demand PoseEstimator loading and execution ---
+        print("Loading PoseEstimator...")
+        device = avaliable_device() # Ensure device is available
+        pose_estimator_ondemand = PoseEstimator(
+            "./pretrained_models/human_model_files/", device='cpu' # Load to CPU first potentially? Or directly to device? Let's use device.
+        )
+        pose_estimator_ondemand.to(device)
+        pose_estimator_ondemand.device = device
+        print("PoseEstimator loaded.")
+        with torch.no_grad():
+             shape_pose = pose_estimator_ondemand(image_raw)
+        print("Pose estimated.")
+        # Unload PoseEstimator
+        shape_param_beta = shape_pose.beta # Store the result before deleting
+        is_full_body = shape_pose.is_full_body # Store result
+        msg = shape_pose.msg # Store result
+        print("Unloading PoseEstimator...")
+        del pose_estimator_ondemand
+        del shape_pose # Delete intermediate variable too
+        torch.cuda.empty_cache()
+        print("PoseEstimator unloaded.")
+        # --- End of On-demand PoseEstimator ---
+
+        assert is_full_body, f"The input image is illegal, {msg}"
 
         # prepare reference image
         image, _, _ = infer_preprocess_image(
@@ -464,18 +556,47 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, motion_generation,
             need_mask=True,
         )
 
+        # --- On-demand VGGHeadDetector loading and execution ---
+        src_head_rgb = None
         try:
-            rgb = np.array(Image.open(image_raw))[...,:3]  # RGBA input
-            rgb = torch.from_numpy(rgb).permute(2, 0, 1)
-            bbox = face_detector.detect_face(rgb)
-            head_rgb = rgb[:, int(bbox[1]) : int(bbox[3]), int(bbox[0]) : int(bbox[2])]
-            head_rgb = head_rgb.permute(1, 2, 0)
-            src_head_rgb = head_rgb.cpu().numpy()
-        except:
-            print("w/o head input!")
-            src_head_rgb = np.zeros((112, 112, 3), dtype=np.uint8)
+            print("Loading VGGHeadDetector...")
+            device = avaliable_device() # Ensure device is available
+            facedetector_ondemand = VGGHeadDetector(
+                "./pretrained_models/gagatracker/vgghead/vgg_heads_l.trcd",
+                device=device,
+            )
+            # facedetector_ondemand.to(device) # Already done in constructor if device is cuda
+            print("VGGHeadDetector loaded.")
 
-        # resize to dino size
+            rgb_face = np.array(Image.open(image_raw))[...,:3]  # RGBA input
+            rgb_face = torch.from_numpy(rgb_face).permute(2, 0, 1).to(device) # Move tensor to device
+            bbox = facedetector_ondemand.detect_face(rgb_face)
+            head_rgb = rgb_face[:, int(bbox[1]) : int(bbox[3]), int(bbox[0]) : int(bbox[2])]
+            head_rgb = head_rgb.permute(1, 2, 0)
+            src_head_rgb = head_rgb.cpu().numpy() # Get result as numpy array on CPU
+            print("Face detected and head cropped.")
+
+            # Unload VGGHeadDetector
+            print("Unloading VGGHeadDetector...")
+            del facedetector_ondemand
+            del rgb_face # Delete intermediate tensor
+            del head_rgb # Delete intermediate tensor
+            torch.cuda.empty_cache()
+            print("VGGHeadDetector unloaded.")
+
+        except Exception as e:
+            print(f"Face detection failed or w/o head input: {e}")
+            src_head_rgb = np.zeros((112, 112, 3), dtype=np.uint8)
+            # Ensure unloading even if detection fails but loading succeeded
+            if 'facedetector_ondemand' in locals():
+                 print("Unloading VGGHeadDetector after error...")
+                 del facedetector_ondemand
+                 torch.cuda.empty_cache()
+                 print("VGGHeadDetector unloaded.")
+        # --- End of On-demand VGGHeadDetector ---
+
+
+        # resize to dino size (src_head_rgb is now defined)
         try:
             src_head_rgb = cv2.resize(
                 src_head_rgb,
@@ -521,9 +642,10 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, motion_generation,
         )
 
         camera_size = len(motion_seq["motion_seqs"])
-        shape_param = shape_pose.beta
+        # shape_param = shape_pose.beta # Use the stored value
+        shape_param = shape_param_beta
 
-        device = "cuda"
+        device = avaliable_device() # Use the helper function
         dtype = torch.float32
         shape_param = torch.tensor(shape_param, dtype=dtype).unsqueeze(0)
 
@@ -550,7 +672,7 @@ def demo_lhm(pose_estimator, face_detector, parsing_net, lhm, motion_generation,
 
         batch_list = [] 
 
-        batch_size = 40  # avoid memeory out!
+        batch_size = 5  # avoid memeory out!
 
         for batch_i in range(0, camera_size, batch_size):
             with torch.no_grad():
@@ -768,11 +890,13 @@ def get_parse():
 def launch_gradio_app():
 
     args = get_parse()
+    model_name = args.model_name # Directly use the model name from args
 
-    model_name = args.model_name
-    model_switcher = AutoModelSwitcher(MEMORY_MODEL_CARD, extra_memory=6000)
+
+    model_switcher = AutoModelSwitcher(MEMORY_MODEL_CARD, extra_memory=-2000)
     model_name =  model_switcher.query(model_name)
 
+    print(f"Using specified model: {model_name}") # Add a print statement to confirm
 
     os.environ.update({
         "APP_ENABLED": "1",
@@ -784,36 +908,10 @@ def launch_gradio_app():
     prior_check()
 
 
-    # video pose estimator
     download_geo_files()
 
     device= avaliable_device()
 
-    motion_generation = Video2MotionPipeline(
-        './pretrained_models/human_model_files',
-        fitting_steps=[30, 50],
-        device=device,
-        kp_mode='vitpose',
-        visualize=False,
-        pad_ratio=0.2,
-        fov=60,
-    )
-
-    facedetector = VGGHeadDetector(
-        "./pretrained_models/gagatracker/vgghead/vgg_heads_l.trcd",
-        device=device,
-    )
-    facedetector.to(device)
-
-    pose_estimator = PoseEstimator(
-        "./pretrained_models/human_model_files/", device='cpu'
-    )
-    pose_estimator.to(device)
-    pose_estimator.device = device 
-    try:
-        parsingnet = SAM2Seg()
-    except: 
-        parsingnet = None
 
     accelerator = Accelerator()
 
@@ -821,12 +919,11 @@ def launch_gradio_app():
     lhm = _build_model(cfg)
     lhm.to('cuda')
 
-    demo_lhm(pose_estimator, facedetector, parsingnet, lhm, motion_generation, cfg)
+    demo_lhm(lhm, None, cfg) # Removed pose_estimator and facedetector arguments
 
-    # cfg, cfg_train = parse_configs()
-    # demo_lhm(None, None, None, None, cfg)
 
 
 
 if __name__ == '__main__':
     launch_gradio_app()
+

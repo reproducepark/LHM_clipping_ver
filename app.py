@@ -54,15 +54,14 @@ from LHM.runners.infer.utils import (
 from LHM.utils.download_utils import download_extract_tar_from_url, download_from_url
 from LHM.utils.face_detector import VGGHeadDetector
 from LHM.utils.ffmpeg_utils import images_to_video
-from LHM.utils.gpu_utils import check_single_gpu_memory
 from LHM.utils.hf_hub import wrap_model_hub
-from LHM.utils.model_card import MODEL_CARD, MODEL_CONFIG
+from LHM.utils.model_card import MEMORY_MODEL_CARD, MODEL_CARD, MODEL_CONFIG
+from LHM.utils.model_query_utils import AutoModelSwitcher
 
 
 def download_geo_files():
     if not os.path.exists('./pretrained_models/dense_sample_points/1_20000.ply'):
         download_from_url('https://virutalbuy-public.oss-cn-hangzhou.aliyuncs.com/share/aigc3d/data/LHM/1_20000.ply','./pretrained_models/dense_sample_points/')
-
 
 
 def query_model_config(model_name):
@@ -742,17 +741,11 @@ def launch_gradio_app():
     download_geo_files()
     args = get_parse()
 
-    is_18gpu = check_single_gpu_memory(18)
-    is_22gpu = check_single_gpu_memory(22)
-
     model_name = args.model_name
-    if not is_22gpu and is_18gpu:
-        print("as your model does not large than 22GB, we will use LHM-500M instead.")
-        model_name = 'LHM-500M-HF' if 'HF' in model_name else "LHM-500M"
-    else:
-        print("as your model does not large than 18GB, we will use LHM-MINI instead.")
-        model_name = "LHM-MINI"
 
+    model_switcher = AutoModelSwitcher(MEMORY_MODEL_CARD, extra_memory=0)
+    # auto query available model_name
+    model_name = model_switcher.query(model_name)
 
     os.environ.update({
         "APP_ENABLED": "1",

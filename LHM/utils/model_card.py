@@ -20,3 +20,11 @@ MODEL_CONFIG={
     '500M': "./configs/inference/human-lrm-500M.yaml",
     'MINI': "./configs/inference/human-lrm-mini.yaml",
 }
+
+MEMORY_MODEL_CARD={
+    "LHM-MINI": 16000,  # 16G
+    "LHM-500M": 18000,
+    "LHM-500M-HF": 18000,
+    "LHM-1B": 22000,
+    "LHM-1B-HF": 22000,
+}
