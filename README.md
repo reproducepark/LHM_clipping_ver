@@ -195,6 +195,7 @@ Now, we support user motion sequence input. As the pose estimator requires some 
 ```bash
 
 # Memory-saving version; More time available for Use.
+# The maximum supported length for 720P video is 20s.
 python ./app_motion_ms.py  
 python ./app_motion_ms.py  --model_name LHM-1B-HF
 

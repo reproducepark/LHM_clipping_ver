@@ -43,36 +43,39 @@ random.seed(0)
 
 
 def load_video(video_path, pad_ratio, max_resolution):
-    cap = cv2.VideoCapture(video_path)
-    assert cap.isOpened(), f"fail to load video file {video_path}"
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    downsample_factor = -1
-    if (height * width) > max_resolution:
-        downsample_factor = sqrt(max_resolution / (height * width))
-        height = int(height * downsample_factor)
-        width = int(width * downsample_factor)
-
     frames = []
-    offset_w, offset_h = 0, 0
-    while cap.isOpened():
-        flag, frame = cap.read()
-        if not flag:
-            break
+    for i in range(2):
+        cap = cv2.VideoCapture(video_path)
+        assert cap.isOpened(), f"fail to load video file {video_path}"
+        fps = cap.get(cv2.CAP_PROP_FPS)
+    
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        downsample_factor = -1
+        if (height * width) > max_resolution:
+            downsample_factor = sqrt(max_resolution / (height * width))
+            height = int(height * downsample_factor)
+            width = int(width * downsample_factor)
 
-        # since the tracker and detector receive BGR images as inputs
-        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        if downsample_factor > 0:
-            frame = cv2.resize(
-                frame,
-                (width, height),
-                interpolation=cv2.INTER_AREA,
-            )
-        if pad_ratio > 0:
-            frame, offset_w, offset_h = img_center_padding(frame, pad_ratio)
-        frames.append(frame)
-    height, width, _ = frames[0].shape
+        
+        offset_w, offset_h = 0, 0
+        while cap.isOpened():
+            flag, frame = cap.read()
+            if not flag:
+                break
+
+            # since the tracker and detector receive BGR images as inputs
+            # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            if downsample_factor > 0:
+                frame = cv2.resize(
+                    frame,
+                    (width, height),
+                    interpolation=cv2.INTER_AREA,
+                )
+            if pad_ratio > 0:
+                frame, offset_w, offset_h = img_center_padding(frame, pad_ratio)
+            frames.append(frame)
+        height, width, _ = frames[0].shape
     return frames, height, width, fps, offset_w, offset_h
 
 
@@ -300,7 +303,7 @@ class Video2MotionPipeline:
         pad_ratio=0.2,
         fov=60,
     ):
-        self.MAX_RESOLUTION = 1289 * 720
+        self.MAX_RESOLUTION = 1280 * 720
         self.device = device
         self.visualize = visualize
         self.kp_mode = kp_mode

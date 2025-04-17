@@ -179,6 +179,7 @@ tar -xvf ./motion_video.tar
 我们现在支持用户自定义动作输入，但是由于动作估计器内存占比，我们LHM-500M 在用户自定义动作输入gradio中需要22GB 的内存, 你也可以提前处理好，然后用我们之前的接口
 ```bash
 # Memory-saving version; More time available for Use.
+# The maximum supported length for 720P video is 20s.
 python ./app_motion_ms.py  
 python ./app_motion_ms.py  --model_name LHM-1B-HF
 
