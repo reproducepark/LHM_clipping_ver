@@ -28,10 +28,10 @@
     | LHM-1B |   15 |   1024    |     16      |      40K |    1024 | dinov2_vitb14_reg & Sapiens-1B | 1024 | 22G GPU, 24G VRAM |
     | LHM-1B-HF |   15|   1024    |     16      |   40K |    1024 | dinov2_vitb14_reg & Sapiens-1B | 1024 | 222G GPU, 24G VRAM |
 
-- Model architecture (with motion & save_memory)
+- Model architecture (with motion & save_memory; maximum supported length for 720P video is 20s)
 
     | Type  | Layers | Feat. Dim | Attn. Heads | The number of GS Points. | Input Res. | Image Encoder     | Encoder Dim. | Service Requirement |
-    | :---: | :----: | :-------: | :---------: | :-----------: | :--------: | :---------------: | :------
+    | :---: | :----: | :-------: | :---------: | :-----------: | :--------: | :---------------: | :----------: | :---: |
     | LHM-MINI |  2 |    1024    |    16 |   20K |    512     | dinov2_vits14_reg & Sapiens-1B | 1024 | 14G GPU, 24G VRAM |
     | LHM-500M |  5 |    1024    |    16 |      40K |    512     | dinov2_vits14_reg & Sapiens-1B | 1024 | 16G GPU, 24G VRAM |
     | LHM-500M-HF  | 5 |    1024    |    16      |      40K       |    512 | dinov2_vitb14_reg & Sapiens-1B |      1024 | 16 GPU, 24G VRAM |

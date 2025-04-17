@@ -6,7 +6,7 @@ pip install -U xformers==0.0.26.post1 --index-url https://download.pytorch.org/w
 pip install -r requirements.txt
 
 # install from source code to avoid the conflict with torchvision
-pip uninstall basicsr
+pip uninstall basicsr -y
 pip install git+https://github.com/XPixelGroup/BasicSR
 
 cd ..

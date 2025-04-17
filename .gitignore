@@ -63,4 +63,4 @@ debug_vis/
 pretrained_models
 train_data
 lhm_cuda_dockers/
-gfgan/
+gfpgan/
