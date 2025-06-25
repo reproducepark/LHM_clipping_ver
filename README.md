@@ -1,7 +1,7 @@
 # <span><img src="./assets/LHM_logo_parsing.png" height="35" style="vertical-align: top;"> - Official PyTorch Implementation</span>
 
 #####  <p align="center"> [Lingteng Qiu<sup>*</sup>](https://lingtengqiu.github.io/), [Xiaodong Gu<sup>*</sup>](https://scholar.google.com.hk/citations?user=aJPO514AAAAJ&hl=zh-CN&oi=ao), [Peihao Li<sup>*</sup>](https://liphao99.github.io/), [Qi Zuo<sup>*</sup>](https://scholar.google.com/citations?user=UDnHe2IAAAAJ&hl=zh-CN), [Weichao Shen](https://scholar.google.com/citations?user=7gTmYHkAAAAJ&hl=zh-CN), [Junfei Zhang](https://scholar.google.com/citations?user=oJjasIEAAAAJ&hl=en), [Kejie Qiu](https://sites.google.com/site/kejieqiujack/home), [Weihao Yuan](https://weihao-yuan.com/)<br> [Guanying Chen<sup>+</sup>](https://guanyingc.github.io/), [Zilong Dong<sup>+</sup>](https://baike.baidu.com/item/%E8%91%A3%E5%AD%90%E9%BE%99/62931048), [Liefeng Bo](https://scholar.google.com/citations?user=FJwtMf0AAAAJ&hl=zh-CN)</p>
-#####  <p align="center"> Tongyi Lab, Alibaba Group</p>
+#####  <p align="center"> Tongyi Lab, Alibaba Group <br> ICCV 2025 </p>
 
 [![Project Website](https://img.shields.io/badge/🌐-Project_Website-blueviolet)](https://aigc3d.github.io/projects/LHM/)
 [![arXiv Paper](https://img.shields.io/badge/📜-arXiv:2503-10625)](https://arxiv.org/pdf/2503.10625)
@@ -17,6 +17,7 @@
 
 如果您熟悉中文，可以[阅读中文版本的README](./README_CN.md)
 ## 📢 Latest Updates
+**[June 26, 2025]** LHM is got accepted by ICCV2025!!! <br>
 **[April 16, 2025]** We have released a memory-saving version of motion and LHM. Now you can run the entire pipeline on 14 GB GPUs. <br>
 **[April 13, 2025]** We have released LHM-MINI, which allows you to run LHM on 16 GB GPUs. 🔥🔥🔥 <br>
 **[April 10, 2025]** We release the motion extraction node and animation infer node of LHM on ComfyUI. With a extracted offline motion, you can generate a 10s animation clip in 20s!!! Update your [ComfyUI](https://github.com/aigc3d/LHM/tree/feat/comfyui) branch right now.🔥🔥🔥 
