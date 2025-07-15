@@ -31,7 +31,8 @@ For more details about the updates, see 👉 👉 👉 [logger](./assets/News_lo
 - [x] Core Inference Pipeline (v0.1) 🔥🔥🔥
 - [x] HuggingFace Demo Integration 🤗🤗🤗
 - [x] ModelScope Deployment
-- [x] Motion Processing Scripts 
+- [x] Motion Processing Scripts
+- [ ] Release Training data & Testing Data (License Available) 
 - [ ] Training Codes Release
 
 ## 🚀 Getting Started
