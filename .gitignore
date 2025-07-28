@@ -26,7 +26,7 @@ Thumbs.db
 # Ignore virtual environment files
 /venv/
 /.venv/
-
+/lhm_env/
 # Ignore package manager files
 /node_modules/
 /yarn.lock
