@@ -336,7 +336,80 @@ def stabilize_trans(trans_data, method='moving_avg', strength=0.7):
     final_trans = (1 - strength) * trans_data + strength * smoothed_trans
     return final_trans
 
-def process_json_files(input_dir, output_dir, trans_z_scale=0.4, stabilize_strength=0.7):
+def stabilize_pose_data(pose_data, method='moving_avg', strength=0.3, window_size=3):
+    """회전 데이터를 안정화합니다 (quaternion 기반)."""
+    if method == 'moving_avg':
+        smoothed_pose = moving_average_smoothing(pose_data, window_size)
+    elif method == 'gaussian':
+        sigma = strength * 1.0
+        smoothed_pose = np.zeros_like(pose_data)
+        for dim in range(pose_data.shape[1]):
+            smoothed_pose[:, dim] = gaussian_filter1d(pose_data[:, dim], sigma=sigma)
+    else:
+        raise ValueError(f"지원하지 않는 방법: {method}")
+    
+    # 원본과 스무딩된 데이터를 혼합
+    final_pose = (1 - strength) * pose_data + strength * smoothed_pose
+    return final_pose
+
+def stabilize_rotation_data(rotation_data, method='quaternion_smooth', strength=0.3, window_size=3):
+    """3D 회전 벡터를 quaternion 기반으로 안정화합니다."""
+    if method == 'quaternion_smooth':
+        # Axis-angle을 quaternion으로 변환
+        quaternions = axis_angle_to_quaternion(rotation_data)
+        
+        # Quaternion을 안정화
+        smoothed_quaternions = moving_average_smoothing(quaternions, window_size)
+        
+        # 정규화
+        norms = np.linalg.norm(smoothed_quaternions, axis=-1, keepdims=True)
+        smoothed_quaternions = smoothed_quaternions / norms
+        
+        # Quaternion을 다시 axis-angle로 변환
+        smoothed_rotation = quaternion_to_axis_angle(smoothed_quaternions)
+        
+        # 원본과 스무딩된 데이터를 혼합
+        final_rotation = (1 - strength) * rotation_data + strength * smoothed_rotation
+        return final_rotation
+    
+    elif method == 'moving_avg':
+        return stabilize_pose_data(rotation_data, method='moving_avg', strength=strength, window_size=window_size)
+    
+    else:
+        raise ValueError(f"지원하지 않는 방법: {method}")
+
+def stabilize_multi_rotation_data(rotation_data, method='quaternion_smooth', strength=0.3, window_size=3):
+    """여러 3D 회전 벡터를 개별적으로 안정화합니다 (body_pose, hand_pose용)."""
+    if method == 'quaternion_smooth':
+        # 각 3D 회전 벡터를 개별적으로 처리
+        num_rotations = rotation_data.shape[1] // 3
+        stabilized_data = rotation_data.copy()
+        
+        for i in range(num_rotations):
+            start_idx = i * 3
+            end_idx = (i + 1) * 3
+            single_rotation = rotation_data[:, start_idx:end_idx]
+            
+            # 개별 회전을 안정화
+            stabilized_single = stabilize_rotation_data(
+                single_rotation, 
+                method='quaternion_smooth', 
+                strength=strength, 
+                window_size=window_size
+            )
+            
+            stabilized_data[:, start_idx:end_idx] = stabilized_single
+        
+        return stabilized_data
+    
+    elif method == 'moving_avg':
+        return stabilize_pose_data(rotation_data, method='moving_avg', strength=strength, window_size=window_size)
+    
+    else:
+        raise ValueError(f"지원하지 않는 방법: {method}")
+
+def process_json_files(input_dir, output_dir, trans_z_scale=0.4, stabilize_strength=0.7, 
+                      stabilize_pose=True, pose_window_size=3, pose_strength=0.3):
     """
     JSON 파일들을 통합 처리합니다.
     
@@ -344,7 +417,10 @@ def process_json_files(input_dir, output_dir, trans_z_scale=0.4, stabilize_stren
         input_dir: 입력 디렉토리
         output_dir: 출력 디렉토리
         trans_z_scale: trans z값 스케일링 팩터
-        stabilize_strength: 안정화 강도
+        stabilize_strength: trans 안정화 강도
+        stabilize_pose: 회전 데이터 안정화 여부
+        pose_window_size: 회전 데이터 안정화 윈도우 크기
+        pose_strength: 회전 데이터 안정화 강도
     """
     
     # 파일들을 숫자 순서로 정렬
@@ -419,22 +495,35 @@ def process_json_files(input_dir, output_dir, trans_z_scale=0.4, stabilize_stren
     print("3. trans 안정화 중...")
     stabilized_trans = stabilize_trans(scaled_trans, method='moving_avg', strength=stabilize_strength)
     
+    # 4. 회전 데이터 안정화 (선택적)
+    if stabilize_pose:
+        print("4. 회전 데이터 안정화 중...")
+        # 개별 회전 데이터를 안정화
+        stabilized_body_poses = stabilize_multi_rotation_data(body_poses, method='quaternion_smooth', strength=pose_strength, window_size=pose_window_size)
+        stabilized_lhand_poses = stabilize_multi_rotation_data(lhand_poses, method='quaternion_smooth', strength=pose_strength, window_size=pose_window_size)
+        stabilized_rhand_poses = stabilize_multi_rotation_data(rhand_poses, method='quaternion_smooth', strength=pose_strength, window_size=pose_window_size)
+    else:
+        print("4. 회전 데이터 안정화 건너뜀")
+        stabilized_body_poses = body_poses
+        stabilized_lhand_poses = lhand_poses
+        stabilized_rhand_poses = rhand_poses
+    
     # 결과 저장
     os.makedirs(output_dir, exist_ok=True)
     
-    print("4. 결과 저장 중...")
+    print("5. 결과 저장 중...")
     for i, (filename, data) in enumerate(zip(files, all_data)):
         # 값 업데이트
         data['trans'] = stabilized_trans[i].tolist() # 최종 안정화된 trans 데이터 사용
         data['root_pose'] = root_poses[i].tolist()
-        data['body_pose'] = body_poses[i].tolist()
+        data['body_pose'] = stabilized_body_poses[i].tolist() # 안정화된 body_pose 사용
         
         # 추가 pose 데이터들 업데이트
         data['jaw_pose'] = jaw_poses[i].tolist()
         data['leye_pose'] = leye_poses[i].tolist()
         data['reye_pose'] = reye_poses[i].tolist()
-        data['lhand_pose'] = lhand_poses[i].tolist()
-        data['rhand_pose'] = rhand_poses[i].tolist()
+        data['lhand_pose'] = stabilized_lhand_poses[i].tolist() # 안정화된 lhand_pose 사용
+        data['rhand_pose'] = stabilized_rhand_poses[i].tolist() # 안정화된 rhand_pose 사용
         
         # 새로운 파일로 저장
         output_filepath = os.path.join(output_dir, filename)
@@ -445,7 +534,11 @@ def process_json_files(input_dir, output_dir, trans_z_scale=0.4, stabilize_stren
     print(f"입력 디렉토리: {input_dir}")
     print(f"출력 디렉토리: {output_dir}")
     print(f"trans z 스케일링: {trans_z_scale}")
-    print(f"안정화 강도: {stabilize_strength}")
+    print(f"trans 안정화 강도: {stabilize_strength}")
+    print(f"회전 데이터 안정화: {'활성화' if stabilize_pose else '비활성화'}")
+    if stabilize_pose:
+        print(f"  - 윈도우 크기: {pose_window_size}")
+        print(f"  - 안정화 강도: {pose_strength}")
     print(f"0값 프레임 처리: {len(zero_indices)}개")
 
 def main():
@@ -460,7 +553,15 @@ def main():
     parser.add_argument('--trans-z-scale', '-z', type=float, default=0.4,
                        help='trans z값 스케일링 팩터 (기본값: 0.4)')
     parser.add_argument('--stabilize-strength', '-s', type=float, default=0.7,
-                       help='안정화 강도 (기본값: 0.7)')
+                       help='trans 안정화 강도 (기본값: 0.7)')
+    parser.add_argument('--stabilize-pose', action='store_true', default=True,
+                       help='회전 데이터 안정화 여부 (기본값: True)')
+    parser.add_argument('--no-stabilize-pose', dest='stabilize_pose', action='store_false',
+                       help='회전 데이터 안정화 비활성화')
+    parser.add_argument('--pose-window-size', type=int, default=3,
+                       help='회전 데이터 안정화 윈도우 크기 (기본값: 3)')
+    parser.add_argument('--pose-strength', type=float, default=0.3,
+                       help='회전 데이터 안정화 강도 (기본값: 0.3)')
     
     args = parser.parse_args()
     
@@ -473,7 +574,10 @@ def main():
         args.input_dir, 
         args.output_dir, 
         args.trans_z_scale, 
-        args.stabilize_strength
+        args.stabilize_strength,
+        args.stabilize_pose,
+        args.pose_window_size,
+        args.pose_strength
     )
 
 if __name__ == "__main__":
