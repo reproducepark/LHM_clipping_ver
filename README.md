@@ -3,6 +3,7 @@
 This repository enables LHM to function even on GPUs with low VRAM, and it processes SMPLest-X outputs to smooth out motion and camera movements.
 
 For installation and env settings, refer to original repo.
+
 **Original Repository: https://github.com/aigc3d/LHM**
 
 ## Quick Start
