@@ -1,10 +1,9 @@
-# Clipping_LHM
+# LHM_for_SMPLest-X
 
-Original: https://github.com/aigc3d/LHM
+This repository enables LHM to function even on GPUs with low VRAM, and it processes SMPLest-X outputs to smooth out motion and camera movements.
 
 For installation and env settings, refer to original repo.
-
-For low VRAM GPU, Clipping video processing on video to motion added.
+**Original Repository: https://github.com/aigc3d/LHM**
 
 ## Quick Start
 
@@ -14,7 +13,7 @@ For low VRAM GPU, Clipping video processing on video to motion added.
 bash inference.sh LHM-500M train_data/example_imgs/<full_body_img>.jpg myoutputs/<your_video>/smplx_params
 ```
 
-### 2. SMPLest-X Motion Data Processing (NEW!)
+### 2. SMPLest-X Motion Data Processing
 ```bash
 python integrated_processing.py
 ```
